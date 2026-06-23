@@ -1,4 +1,4 @@
-export type FridgeSection =
+export type BuiltinSection =
   | 'top-shelf'
   | 'middle-shelf'
   | 'bottom-shelf'
@@ -6,6 +6,9 @@ export type FridgeSection =
   | 'door-upper'
   | 'door-lower'
   | 'freezer'
+
+// custom-{id} 형태로 커스텀 장소 지원
+export type FridgeSection = BuiltinSection | string
 
 export type IngredientStatus = 'confirmed' | 'uncertain' | 'held'
 
@@ -15,19 +18,25 @@ export interface Ingredient {
   emoji: string
   section: FridgeSection
   confidence: number
-  expiryDate?: string // ISO string
+  expiryDate?: string
   quantity?: string
   status: IngredientStatus
   isBasicSeasoning?: boolean
+}
+
+export interface CustomLocation {
+  id: string         // e.g. "custom-1234"
+  name: string       // e.g. "김치냉장고"
+  emoji: string
 }
 
 export interface Recipe {
   id: string
   name: string
   emoji: string
-  cookTime: number // minutes
+  cookTime: number
   difficulty: 'easy' | 'medium'
-  matchRate: number // 0-100
+  matchRate: number
   availableIngredients: string[]
   missingIngredients: string[]
   steps: string[]
