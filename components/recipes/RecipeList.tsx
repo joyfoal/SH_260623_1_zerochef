@@ -13,11 +13,12 @@ import { getRecipeRecommendations } from '@/app/actions/fridge'
 interface RecipeListProps {
   ingredients: Ingredient[]
   apiKey: string
+  hasKey?: boolean
   filterIngredient?: string | null
   onClearIngredientFilter?: () => void
 }
 
-export function RecipeList({ ingredients, apiKey, filterIngredient, onClearIngredientFilter }: RecipeListProps) {
+export function RecipeList({ ingredients, apiKey, hasKey, filterIngredient, onClearIngredientFilter }: RecipeListProps) {
   const [filter,      setFilter]      = useState<FilterType>('all')
   const [aiRecipes,   setAiRecipes]   = useState<Recipe[] | null>(null)
   const [loading,     setLoading]     = useState(false)
@@ -38,8 +39,10 @@ export function RecipeList({ ingredients, apiKey, filterIngredient, onClearIngre
     }
   }, [filterIngredient])
 
+  const canUseAi = hasKey ?? !!apiKey
+
   const fetchAiRecipes = async (target?: string) => {
-    if (!apiKey || loading) return
+    if (!canUseAi || loading) return
     setLoading(true); setError(null); setAiRecipes(null)
     try {
       const names = ingredients
@@ -113,7 +116,7 @@ export function RecipeList({ ingredients, apiKey, filterIngredient, onClearIngre
           )}
           <button
             onClick={() => fetchAiRecipes(filterIngredient ?? undefined)}
-            disabled={!apiKey || loading}
+            disabled={!canUseAi || loading}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-green-600 hover:bg-green-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-semibold transition-all active:scale-95">
             {loading
               ? <><Loader2 className="w-3.5 h-3.5 animate-spin" />분석 중</>

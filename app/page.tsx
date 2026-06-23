@@ -1,11 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { RefrigeratorIcon, ChefHat, Package, Settings } from 'lucide-react'
 import { Ingredient, FridgeSection, CustomLocation } from '@/lib/types'
 import { useApiKeys } from '@/hooks/useApiKeys'
 import { useIngredients } from '@/hooks/useIngredients'
 import { useCustomLocations } from '@/hooks/useCustomLocations'
+import { getEnvKeyStatus } from '@/app/actions/fridge'
 import { PhotoUpload } from '@/components/upload/PhotoUpload'
 import { FridgeView } from '@/components/fridge/FridgeView'
 import { AddLocationModal } from '@/components/fridge/AddLocationModal'
@@ -35,6 +36,11 @@ export default function Home() {
   const [settingsOpen,     setSettingsOpen]     = useState(false)
   const [addLocationOpen,  setAddLocationOpen]  = useState(false)
   const [recipeFilter,     setRecipeFilter]     = useState<string | null>(null)
+  const [envKeyConfigured, setEnvKeyConfigured] = useState(false)
+
+  useEffect(() => {
+    getEnvKeyStatus().then(({ configured }) => setEnvKeyConfigured(configured))
+  }, [])
 
   // 구역별 촬영 이미지 URL 보관
   // key: 'fridge' | 'freezer' | customLocationId
@@ -42,6 +48,8 @@ export default function Home() {
 
   if (!initialized || !keysLoaded) return <div className="phone-shell bg-[#09090b]" />
 
+  // 환경변수 또는 localStorage 키가 있으면 사용 가능
+  const hasKey               = envKeyConfigured || !!activeKey
   const showUpload           = ingredients.length === 0
   const confirmedIngredients = ingredients.filter(i => i.status === 'confirmed')
   const heldIngredients      = ingredients.filter(i => i.status === 'held')
@@ -116,11 +124,11 @@ export default function Home() {
         <div className="flex items-center gap-2.5">
           <span className="text-2xl">🧊</span>
           <span className="text-white font-extrabold text-lg tracking-tight">Zero Chef</span>
-          <div className={`w-2 h-2 rounded-full ${activeKey ? 'bg-green-400' : 'bg-zinc-600'}`} />
+          <div className={`w-2 h-2 rounded-full ${hasKey ? 'bg-green-400' : 'bg-zinc-600'}`} />
         </div>
         <button onClick={() => setSettingsOpen(true)}
           className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${
-            activeKey
+            hasKey
               ? 'bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white'
               : 'bg-amber-500/20 border border-amber-500/40 text-amber-400'
           }`}>
@@ -135,7 +143,7 @@ export default function Home() {
             <PhotoUpload
               onAnalyzeComplete={handleAnalyzeComplete}
               onOpenSettings={() => setSettingsOpen(true)}
-              apiKey={activeKey}
+              apiKey={hasKey ? (activeKey || '__env__') : ''}
             />
           ) : (
             <>
@@ -159,6 +167,7 @@ export default function Home() {
                 <RecipeList
                   ingredients={confirmedIngredients}
                   apiKey={activeKey}
+                  hasKey={hasKey}
                   filterIngredient={recipeFilter}
                   onClearIngredientFilter={() => setRecipeFilter(null)}
                 />
@@ -209,7 +218,7 @@ export default function Home() {
         onClose={() => setAddModalSection(null)} onAdd={handleAddConfirm} />
 
       <AddLocationModal
-        open={addLocationOpen} apiKey={activeKey}
+        open={addLocationOpen} apiKey={hasKey ? (activeKey || '__env__') : ''}
         onAdd={handleAddLocation} onClose={() => setAddLocationOpen(false)}
         onOpenSettings={() => { setAddLocationOpen(false); setSettingsOpen(true) }} />
 
@@ -241,6 +250,7 @@ export default function Home() {
       <SettingsSheet
         open={settingsOpen}
         keys={keys} activeId={activeId}
+        envKeyConfigured={envKeyConfigured}
         onAddKey={addKey} onRemoveKey={removeKey} onActivateKey={activateKey}
         onReset={handleReset} onClose={() => setSettingsOpen(false)} />
     </div>

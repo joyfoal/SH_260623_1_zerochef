@@ -10,6 +10,7 @@ interface SettingsSheetProps {
   open: boolean
   keys: ApiKeyEntry[]
   activeId: string
+  envKeyConfigured: boolean
   onAddKey: (label: string, key: string) => void
   onRemoveKey: (id: string) => void
   onActivateKey: (id: string) => void
@@ -18,7 +19,7 @@ interface SettingsSheetProps {
 }
 
 export function SettingsSheet({
-  open, keys, activeId, onAddKey, onRemoveKey, onActivateKey, onReset, onClose,
+  open, keys, activeId, envKeyConfigured, onAddKey, onRemoveKey, onActivateKey, onReset, onClose,
 }: SettingsSheetProps) {
   const [view, setView]         = useState<'main' | 'add'>('main')
   const [newLabel, setNewLabel] = useState('')
@@ -94,13 +95,28 @@ export function SettingsSheet({
                     <section>
                       <div className="flex items-center justify-between mb-3">
                         <h3 className="text-zinc-300 text-sm font-bold">API 키 관리</h3>
-                        <button onClick={() => setView('add')}
-                          className="flex items-center gap-1.5 px-3 py-1.5 bg-green-600 hover:bg-green-500 rounded-xl text-white text-xs font-semibold transition-colors active:scale-95">
-                          <Plus className="w-3.5 h-3.5" />새 키 등록
-                        </button>
+                        {!envKeyConfigured && (
+                          <button onClick={() => setView('add')}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-green-600 hover:bg-green-500 rounded-xl text-white text-xs font-semibold transition-colors active:scale-95">
+                            <Plus className="w-3.5 h-3.5" />새 키 등록
+                          </button>
+                        )}
                       </div>
 
-                      {keys.length === 0 ? (
+                      {/* 환경변수 설정됨 배지 */}
+                      {envKeyConfigured && (
+                        <div className="flex items-center gap-3 p-3.5 bg-green-950/30 border border-green-800/50 rounded-2xl mb-3">
+                          <div className="w-9 h-9 bg-green-500/20 rounded-xl flex items-center justify-center shrink-0">
+                            <Check className="w-5 h-5 text-green-400" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-green-300 text-sm font-semibold">.env.local로 설정됨</p>
+                            <p className="text-green-600 text-xs mt-0.5">OPENAI_API_KEY 환경변수를 읽고 있어요</p>
+                          </div>
+                        </div>
+                      )}
+
+                      {!envKeyConfigured && keys.length === 0 ? (
                         <button onClick={() => setView('add')}
                           className="w-full flex items-center gap-3 p-4 bg-zinc-800/60 border-2 border-dashed border-zinc-700 rounded-2xl text-zinc-500 hover:border-green-500/40 hover:text-zinc-400 transition-all active:scale-[0.98]">
                           <Key className="w-5 h-5 shrink-0" />
@@ -110,7 +126,7 @@ export function SettingsSheet({
                           </div>
                           <Plus className="w-4 h-4 ml-auto" />
                         </button>
-                      ) : (
+                      ) : !envKeyConfigured ? (
                         <div className="flex flex-col gap-2">
                           {keys.map(entry => {
                             const isActive = entry.id === activeId
@@ -149,21 +165,30 @@ export function SettingsSheet({
                             )
                           })}
                         </div>
-                      )}
+                      ) : null}
 
-                      <div className="mt-3 bg-zinc-800/40 rounded-xl p-3.5 flex flex-col gap-1.5">
-                        <p className="text-zinc-400 text-xs font-semibold">API 키 발급</p>
-                        <ol className="flex flex-col gap-1">
-                          {['platform.openai.com 접속', 'API Keys 메뉴 선택', 'Create new secret key', '생성된 키를 여기에 등록'].map((s, i) => (
-                            <li key={i} className="flex gap-2 text-zinc-500 text-[11px]">
-                              <span className="text-zinc-600 font-bold shrink-0">{i + 1}.</span>{s}
-                            </li>
-                          ))}
-                        </ol>
-                        <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer"
-                          className="flex items-center gap-1 text-green-400 text-[11px] mt-0.5 hover:text-green-300">
-                          <ExternalLink className="w-3 h-3" />platform.openai.com/api-keys
-                        </a>
+                      <div className="mt-3 bg-zinc-800/40 rounded-xl p-3.5 flex flex-col gap-2.5">
+                        <div>
+                          <p className="text-zinc-400 text-xs font-semibold mb-1.5">방법 1 — .env.local 파일 (권장)</p>
+                          <div className="bg-zinc-900 rounded-lg px-3 py-2 font-mono text-[11px] text-green-400">
+                            OPENAI_API_KEY=sk-...
+                          </div>
+                          <p className="text-zinc-600 text-[11px] mt-1">프로젝트 루트의 .env.local 파일에 저장</p>
+                        </div>
+                        <div className="border-t border-zinc-700 pt-2">
+                          <p className="text-zinc-400 text-xs font-semibold mb-1.5">방법 2 — 앱에서 직접 등록</p>
+                          <ol className="flex flex-col gap-1">
+                            {['platform.openai.com 접속', 'API Keys 메뉴 선택', 'Create new secret key', '위 "새 키 등록" 버튼으로 등록'].map((s, i) => (
+                              <li key={i} className="flex gap-2 text-zinc-500 text-[11px]">
+                                <span className="text-zinc-600 font-bold shrink-0">{i + 1}.</span>{s}
+                              </li>
+                            ))}
+                          </ol>
+                          <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer"
+                            className="flex items-center gap-1 text-green-400 text-[11px] mt-1 hover:text-green-300">
+                            <ExternalLink className="w-3 h-3" />platform.openai.com/api-keys
+                          </a>
+                        </div>
                       </div>
                     </section>
 

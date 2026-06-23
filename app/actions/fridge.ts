@@ -3,13 +3,21 @@
 import OpenAI from 'openai'
 import { Ingredient, Recipe } from '@/lib/types'
 
-function getClient(apiKey: string) {
-  return new OpenAI({ apiKey })
+// 환경변수 우선, 없으면 클라이언트 전달값 사용
+function getClient(apiKey?: string) {
+  const key = process.env.OPENAI_API_KEY || apiKey
+  if (!key) throw new Error('API 키가 설정되지 않았습니다.')
+  return new OpenAI({ apiKey: key })
+}
+
+// 환경변수 설정 여부만 클라이언트에 알려줌 (키값은 노출 안 함)
+export async function getEnvKeyStatus(): Promise<{ configured: boolean }> {
+  return { configured: !!process.env.OPENAI_API_KEY }
 }
 
 export async function analyzeFridgeImage(
   imageBase64: string,
-  apiKey: string
+  apiKey?: string
 ): Promise<Partial<Ingredient>[]> {
   try {
     const openai = getClient(apiKey)
@@ -58,7 +66,7 @@ JSON 배열만 반환:`,
 
 export async function getRecipeRecommendations(
   ingredientNames: string[],
-  apiKey: string,
+  apiKey?: string,
   targetIngredient?: string
 ): Promise<Partial<Recipe>[]> {
   try {
