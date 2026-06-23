@@ -1,65 +1,200 @@
-import Image from "next/image";
+'use client'
+
+import { useState, useCallback } from 'react'
+import { RefrigeratorIcon, ChefHat, Package, Camera } from 'lucide-react'
+import { Ingredient, FridgeSection } from '@/lib/types'
+import { MOCK_INGREDIENTS } from '@/lib/mock-data'
+import { PhotoUpload } from '@/components/upload/PhotoUpload'
+import { FridgeView } from '@/components/fridge/FridgeView'
+import { AddIngredientModal } from '@/components/ingredients/AddIngredientModal'
+import { UncertainItemPopup } from '@/components/ingredients/UncertainItemPopup'
+import { IngredientDetailSheet } from '@/components/ingredients/IngredientDetailSheet'
+import { HoldingArea } from '@/components/ingredients/HoldingArea'
+import { RecipeList } from '@/components/recipes/RecipeList'
+
+type Tab = 'fridge' | 'recipes' | 'holding'
+
+let nextId = 100
 
 export default function Home() {
+  const [phase, setPhase] = useState<'upload' | 'app'>('upload')
+  const [tab, setTab] = useState<Tab>('fridge')
+  const [ingredients, setIngredients] = useState<Ingredient[]>(MOCK_INGREDIENTS)
+  const [addModalOpen, setAddModalOpen] = useState(false)
+  const [addModalSection, setAddModalSection] = useState<FridgeSection | null>(null)
+  const [uncertainPopup, setUncertainPopup] = useState<Ingredient | null>(null)
+  const [detailIngredient, setDetailIngredient] = useState<Ingredient | null>(null)
+
+  const confirmedIngredients = ingredients.filter(i => i.status === 'confirmed')
+  const heldIngredients = ingredients.filter(i => i.status === 'held')
+
+  const handleAnalyzeComplete = useCallback(() => {
+    setPhase('app')
+    setTab('fridge')
+  }, [])
+
+  const handleDeleteIngredient = useCallback((id: string) => {
+    setIngredients(prev => prev.filter(i => i.id !== id))
+  }, [])
+
+  const handleAddIngredient = useCallback((section: FridgeSection) => {
+    setAddModalSection(section)
+    setAddModalOpen(true)
+  }, [])
+
+  const handleAddConfirm = useCallback((data: Omit<Ingredient, 'id'>) => {
+    const newIng: Ingredient = { ...data, id: String(nextId++) }
+    setIngredients(prev => [...prev, newIng])
+    setAddModalOpen(false)
+  }, [])
+
+  const handleUncertainIngredient = useCallback((ingredient: Ingredient) => {
+    setUncertainPopup(ingredient)
+  }, [])
+
+  const handleUncertainConfirm = useCallback((id: string, correctedName: string) => {
+    setIngredients(prev =>
+      prev.map(i => i.id === id ? { ...i, name: correctedName, status: 'confirmed' as const } : i)
+    )
+    setUncertainPopup(null)
+  }, [])
+
+  const handleUncertainHold = useCallback((id: string) => {
+    setIngredients(prev =>
+      prev.map(i => i.id === id ? { ...i, status: 'held' as const } : i)
+    )
+    setUncertainPopup(null)
+  }, [])
+
+  const handleHoldConfirm = useCallback((id: string, name: string) => {
+    setIngredients(prev =>
+      prev.map(i => i.id === id ? { ...i, name, status: 'confirmed' as const } : i)
+    )
+  }, [])
+
+  const handleHoldDelete = useCallback((id: string) => {
+    setIngredients(prev => prev.filter(i => i.id !== id))
+  }, [])
+
+  const handleTapIngredient = useCallback((ingredient: Ingredient) => {
+    setDetailIngredient(ingredient)
+  }, [])
+
+  const handleDetailDelete = useCallback((id: string) => {
+    setIngredients(prev => prev.filter(i => i.id !== id))
+    setDetailIngredient(null)
+  }, [])
+
+  if (phase === 'upload') {
+    return (
+      <div className="h-full overflow-y-auto">
+        <PhotoUpload onAnalyzeComplete={handleAnalyzeComplete} />
+      </div>
+    )
+  }
+
+  const tabs: { id: Tab; label: string; icon: React.ReactNode; badge?: number }[] = [
+    { id: 'fridge', label: '냉장고', icon: <RefrigeratorIcon className="w-5 h-5" /> },
+    { id: 'recipes', label: '레시피', icon: <ChefHat className="w-5 h-5" /> },
+    {
+      id: 'holding',
+      label: '보류함',
+      icon: <Package className="w-5 h-5" />,
+      badge: heldIngredients.length || undefined,
+    },
+  ]
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <div className="h-full flex flex-col bg-[#09090b]">
+      {/* Header */}
+      <header className="flex items-center justify-between px-4 pt-4 pb-3 border-b border-zinc-800 shrink-0">
+        <div className="flex items-center gap-2">
+          <span className="text-xl">🧊</span>
+          <span className="text-white font-bold text-sm">냉장고 셰프</span>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+        <div className="flex items-center gap-2">
+          <span className="text-zinc-500 text-xs">{confirmedIngredients.length}가지 재료</span>
+          <button
+            onClick={() => setPhase('upload')}
+            className="flex items-center gap-1 px-2.5 py-1 bg-zinc-800 hover:bg-zinc-700 rounded-lg text-zinc-400 text-xs transition-colors"
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
+            <Camera className="w-3 h-3" />
+            재촬영
+          </button>
+        </div>
+      </header>
+
+      {/* Content */}
+      <main className="flex-1 overflow-y-auto">
+        <div className="px-4 py-4 max-w-lg mx-auto">
+          {tab === 'fridge' && (
+            <FridgeView
+              ingredients={ingredients.filter(i => i.status !== 'held')}
+              onDeleteIngredient={handleDeleteIngredient}
+              onAddIngredient={handleAddIngredient}
+              onUncertainIngredient={handleUncertainIngredient}
+              onTapIngredient={handleTapIngredient}
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+          )}
+          {tab === 'recipes' && (
+            <RecipeList ingredients={confirmedIngredients} />
+          )}
+          {tab === 'holding' && (
+            <HoldingArea
+              ingredients={heldIngredients}
+              onConfirm={handleHoldConfirm}
+              onDelete={handleHoldDelete}
+            />
+          )}
         </div>
       </main>
+
+      {/* Bottom navigation */}
+      <nav className="shrink-0 border-t border-zinc-800 bg-zinc-950 safe-bottom">
+        <div className="flex items-center">
+          {tabs.map(t => (
+            <button
+              key={t.id}
+              onClick={() => setTab(t.id)}
+              className={`flex-1 flex flex-col items-center gap-1 py-3 transition-colors relative ${
+                tab === t.id ? 'text-green-400' : 'text-zinc-600 hover:text-zinc-400'
+              }`}
+            >
+              {t.badge !== undefined && t.badge > 0 && (
+                <span className="absolute top-2 right-[calc(50%-12px)] w-4 h-4 bg-amber-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                  {t.badge}
+                </span>
+              )}
+              {t.icon}
+              <span className="text-[10px] font-medium">{t.label}</span>
+              {tab === t.id && (
+                <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-6 h-0.5 bg-green-400 rounded-full" />
+              )}
+            </button>
+          ))}
+        </div>
+      </nav>
+
+      {/* Modals */}
+      <AddIngredientModal
+        open={addModalOpen}
+        section={addModalSection}
+        onClose={() => setAddModalOpen(false)}
+        onAdd={handleAddConfirm}
+      />
+
+      <UncertainItemPopup
+        ingredient={uncertainPopup}
+        onConfirm={handleUncertainConfirm}
+        onHold={handleUncertainHold}
+        onClose={() => setUncertainPopup(null)}
+      />
+
+      <IngredientDetailSheet
+        ingredient={detailIngredient}
+        onClose={() => setDetailIngredient(null)}
+        onDelete={handleDetailDelete}
+      />
     </div>
-  );
+  )
 }
