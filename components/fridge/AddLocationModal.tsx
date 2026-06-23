@@ -19,7 +19,7 @@ const LOCATION_PRESETS = [
 interface AddLocationModalProps {
   open: boolean
   apiKey: string
-  onAdd: (location: CustomLocation, ingredients: Ingredient[]) => void
+  onAdd: (location: CustomLocation, ingredients: Ingredient[], imageUrl?: string) => void
   onClose: () => void
   onOpenSettings?: () => void
 }
@@ -39,6 +39,7 @@ export function AddLocationModal({ open, apiKey, onAdd, onClose, onOpenSettings 
     setAnalyzing(true); setProgress(20)
     const locationId = `custom-${Date.now()}`
     const location: CustomLocation = { id: locationId, name: name.trim(), emoji }
+    const imageUrl = URL.createObjectURL(file)
 
     try {
       setProgress(40)
@@ -55,8 +56,9 @@ export function AddLocationModal({ open, apiKey, onAdd, onClose, onOpenSettings 
         status: (item.status ?? 'confirmed') as Ingredient['status'],
       } as Ingredient))
       await new Promise(r => setTimeout(r, 300))
-      onAdd(location, newIngredients)
+      onAdd(location, newIngredients, imageUrl)
     } catch {
+      URL.revokeObjectURL(imageUrl)
       onAdd(location, [])
     }
     reset(); onClose()
@@ -75,8 +77,12 @@ export function AddLocationModal({ open, apiKey, onAdd, onClose, onOpenSettings 
 
   return (
     <>
-      <input ref={cameraRef}  type="file" accept="image/*" capture="environment" className="hidden" onChange={handleChange} />
-      <input ref={galleryRef} type="file" accept="image/*" className="hidden" onChange={handleChange} />
+      <input ref={cameraRef}  type="file" accept="image/*" capture="environment"
+        style={{ position: 'absolute', width: 0, height: 0, opacity: 0, overflow: 'hidden', border: 'none', padding: 0, pointerEvents: 'none' }}
+        onChange={handleChange} />
+      <input ref={galleryRef} type="file" accept="image/*"
+        style={{ position: 'absolute', width: 0, height: 0, opacity: 0, overflow: 'hidden', border: 'none', padding: 0, pointerEvents: 'none' }}
+        onChange={handleChange} />
 
       <AnimatePresence>
         {open && (

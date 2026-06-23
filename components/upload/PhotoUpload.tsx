@@ -5,8 +5,14 @@ import { Camera, ImageIcon, Loader2, Settings } from 'lucide-react'
 import { analyzeFridgeImage } from '@/app/actions/fridge'
 import { Ingredient } from '@/lib/types'
 
+// display:none은 iOS에서 카메라를 열지 못함 — position:absolute로 숨김
+const hiddenInputStyle: React.CSSProperties = {
+  position: 'absolute', width: 0, height: 0, opacity: 0, overflow: 'hidden',
+  border: 'none', padding: 0, pointerEvents: 'none',
+}
+
 interface PhotoUploadProps {
-  onAnalyzeComplete: (ingredients: Ingredient[]) => void
+  onAnalyzeComplete: (ingredients: Ingredient[], imageUrl: string) => void
   onOpenSettings: () => void
   apiKey: string
 }
@@ -24,9 +30,9 @@ export function PhotoUpload({ onAnalyzeComplete, onOpenSettings, apiKey }: Photo
   const handleFile = async (file: File) => {
     if (!apiKey) return
     setError(null)
-    setPreview(URL.createObjectURL(file))
-    setAnalyzing(true)
-    setProgress(0)
+    const objectUrl = URL.createObjectURL(file)
+    setPreview(objectUrl)
+    setAnalyzing(true); setProgress(0)
 
     try {
       setStatusLabel('이미지 변환 중...'); setProgress(15)
@@ -35,7 +41,7 @@ export function PhotoUpload({ onAnalyzeComplete, onOpenSettings, apiKey }: Photo
       setStatusLabel('AI가 식재료를 인식하고 있어요...'); setProgress(40)
       const result = await analyzeFridgeImage(base64, apiKey)
 
-      setProgress(85); setStatusLabel('완료!')
+      setProgress(90); setStatusLabel('완료!')
       await new Promise(r => setTimeout(r, 400))
       setProgress(100)
       await new Promise(r => setTimeout(r, 300))
@@ -47,10 +53,10 @@ export function PhotoUpload({ onAnalyzeComplete, onOpenSettings, apiKey }: Photo
           status: item.status ?? 'confirmed',
         } as Ingredient)
       )
-      onAnalyzeComplete(ingredients)
+      onAnalyzeComplete(ingredients, objectUrl)
     } catch (e: any) {
-      setAnalyzing(false)
-      setPreview(null)
+      URL.revokeObjectURL(objectUrl)
+      setAnalyzing(false); setPreview(null)
       setError(
         e?.message?.includes('401') ? 'API 키가 유효하지 않아요. 설정(⚙️)에서 확인해주세요.' :
         e?.message?.includes('429') ? '요청 한도를 초과했어요. 잠시 후 다시 시도해주세요.' :
@@ -59,10 +65,9 @@ export function PhotoUpload({ onAnalyzeComplete, onOpenSettings, apiKey }: Photo
     }
   }
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file) handleFile(file)
-    e.target.value = ''
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>, ref: React.RefObject<HTMLInputElement | null>) => {
+    const file = e.target.files?.[0]; if (file) handleFile(file)
+    if (ref.current) ref.current.value = ''
   }
 
   const handleDrop = (e: React.DragEvent) => {
@@ -103,7 +108,7 @@ export function PhotoUpload({ onAnalyzeComplete, onOpenSettings, apiKey }: Photo
         </div>
       ) : (
         <>
-          {/* API 키 미등록 */}
+          {/* API 키 미등록 안내 */}
           {!apiKey && (
             <div className="w-full max-w-sm mb-5">
               <div className="flex flex-col items-center gap-3 p-5 bg-zinc-800/60 border border-zinc-700 rounded-2xl text-center">
@@ -127,24 +132,16 @@ export function PhotoUpload({ onAnalyzeComplete, onOpenSettings, apiKey }: Photo
             </div>
           )}
 
-          {/* 업로드 영역 */}
-          <div
-            className="w-full max-w-sm"
-            onDrop={handleDrop}
-            onDragOver={e => e.preventDefault()}
-          >
+          {/* 촬영/앨범 버튼 */}
+          <div className="w-full max-w-sm" onDrop={handleDrop} onDragOver={e => e.preventDefault()}>
             <div className="flex gap-3 w-full">
-              <button
-                onClick={() => cameraRef.current?.click()}
-                disabled={!apiKey}
-                className="flex-1 flex flex-col items-center gap-2.5 py-6 rounded-2xl bg-green-600 hover:bg-green-500 disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.97] transition-all">
+              <button onClick={() => cameraRef.current?.click()} disabled={!apiKey}
+                className="flex-1 flex flex-col items-center gap-2.5 py-7 rounded-2xl bg-green-600 hover:bg-green-500 disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.97] transition-all">
                 <Camera className="w-7 h-7 text-white" />
                 <span className="text-white text-sm font-bold">바로 촬영</span>
               </button>
-              <button
-                onClick={() => galleryRef.current?.click()}
-                disabled={!apiKey}
-                className="flex-1 flex flex-col items-center gap-2.5 py-6 rounded-2xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.97] transition-all">
+              <button onClick={() => galleryRef.current?.click()} disabled={!apiKey}
+                className="flex-1 flex flex-col items-center gap-2.5 py-7 rounded-2xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.97] transition-all">
                 <ImageIcon className="w-7 h-7 text-zinc-300" />
                 <span className="text-zinc-300 text-sm font-bold">앨범 선택</span>
               </button>
@@ -159,8 +156,10 @@ export function PhotoUpload({ onAnalyzeComplete, onOpenSettings, apiKey }: Photo
         </>
       )}
 
-      <input ref={cameraRef}  type="file" accept="image/*" capture="environment" className="hidden" onChange={handleChange} />
-      <input ref={galleryRef} type="file" accept="image/*" className="hidden" onChange={handleChange} />
+      <input ref={cameraRef}  type="file" accept="image/*" capture="environment"
+        style={hiddenInputStyle} onChange={e => handleChange(e, cameraRef)} />
+      <input ref={galleryRef} type="file" accept="image/*"
+        style={hiddenInputStyle} onChange={e => handleChange(e, galleryRef)} />
     </div>
   )
 }

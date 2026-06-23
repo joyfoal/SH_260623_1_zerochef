@@ -16,6 +16,10 @@ import { HoldingArea } from '@/components/ingredients/HoldingArea'
 import { RecipeList } from '@/components/recipes/RecipeList'
 import { SettingsSheet } from '@/components/settings/SettingsSheet'
 
+// 냉장실 칸들 (섹션 이미지 key 용도)
+const FRIDGE_SCOPE_KEY  = 'fridge'
+const FREEZER_SCOPE_KEY = 'freezer'
+
 type Tab = 'fridge' | 'recipes' | 'holding'
 let nextId = 1000
 
@@ -32,24 +36,53 @@ export default function Home() {
   const [addLocationOpen,  setAddLocationOpen]  = useState(false)
   const [recipeFilter,     setRecipeFilter]     = useState<string | null>(null)
 
+  // 구역별 촬영 이미지 URL 보관
+  // key: 'fridge' | 'freezer' | customLocationId
+  const [sectionImages, setSectionImages] = useState<Record<string, string>>({})
+
   if (!initialized || !keysLoaded) return <div className="phone-shell bg-[#09090b]" />
 
-  const showUpload          = ingredients.length === 0
+  const showUpload           = ingredients.length === 0
   const confirmedIngredients = ingredients.filter(i => i.status === 'confirmed')
   const heldIngredients      = ingredients.filter(i => i.status === 'held')
 
-  // 전체 초기화: 재료 + 장소 + 모든 API 키
+  // 재료가 속한 구역의 이미지 찾기
+  const getSectionImageUrl = (ing: Ingredient): string | undefined => {
+    if (ing.section === 'freezer') return sectionImages[FREEZER_SCOPE_KEY] ?? sectionImages[FRIDGE_SCOPE_KEY]
+    if (ing.section.startsWith('custom-')) return sectionImages[ing.section]
+    return sectionImages[FRIDGE_SCOPE_KEY]
+  }
+
+  // 전체 초기화
   const handleReset = () => {
-    clearIngredients()
-    clearKeys()
+    clearIngredients(); clearKeys()
+    setSectionImages({})
     try { localStorage.removeItem('custom_locations_v1') } catch {}
     locations.forEach(l => removeLocation(l.id))
   }
 
-  // 사진 분석 완료 → 레시피 탭으로
-  const handleAnalyzeComplete = (newIngredients: Ingredient[]) => {
+  // 최초 사진 분석 완료 → 레시피 탭으로
+  const handleAnalyzeComplete = (newIngredients: Ingredient[], imageUrl: string) => {
     setAll(newIngredients)
+    setSectionImages({ [FRIDGE_SCOPE_KEY]: imageUrl })
     setTab('recipes')
+  }
+
+  // 구역별 재촬영 완료
+  const handleRetake = (scope: 'fridge' | 'freezer' | string, items: Ingredient[], imageUrl: string) => {
+    setSectionImages(prev => ({ ...prev, [scope]: imageUrl }))
+    if (scope === FRIDGE_SCOPE_KEY) {
+      // 냉장실 전체 교체 (냉동실·커스텀 제외)
+      const FRIDGE_SECTIONS = ['top-shelf','middle-shelf','bottom-shelf','crisper','door-upper','door-lower']
+      update(prev => [
+        ...prev.filter(i => !FRIDGE_SECTIONS.includes(i.section)),
+        ...items,
+      ])
+    } else if (scope === FREEZER_SCOPE_KEY) {
+      update(prev => [...prev.filter(i => i.section !== 'freezer'), ...items])
+    } else {
+      update(prev => [...prev.filter(i => i.section !== scope), ...items])
+    }
   }
 
   const handleAddConfirm = (data: Omit<Ingredient, 'id'>) => {
@@ -57,13 +90,10 @@ export default function Home() {
     setAddModalSection(null)
   }
 
-  const handleAddSectionIngredients = (section: FridgeSection, items: Ingredient[]) => {
-    update(prev => [...prev.filter(i => i.section !== section), ...items])
-  }
-
-  const handleAddLocation = (loc: CustomLocation, items: Ingredient[]) => {
+  const handleAddLocation = (loc: CustomLocation, items: Ingredient[], imageUrl?: string) => {
     addLocation(loc)
     update(prev => [...prev, ...items])
+    if (imageUrl) setSectionImages(prev => ({ ...prev, [loc.id]: imageUrl }))
   }
 
   const handleFindRecipes = (ingredientName: string) => {
@@ -120,7 +150,7 @@ export default function Home() {
                   onAddIngredient={s => setAddModalSection(s)}
                   onUncertainIngredient={ing => setUncertainPopup(ing)}
                   onTapIngredient={ing => setDetailIngredient(ing)}
-                  onAddSectionIngredients={handleAddSectionIngredients}
+                  onRetake={handleRetake}
                   onOpenAddLocation={() => setAddLocationOpen(true)}
                 />
               )}
@@ -196,6 +226,7 @@ export default function Home() {
       <IngredientDetailSheet
         ingredient={detailIngredient}
         customLocationName={detailIngredient ? getCustomName(detailIngredient.section) : undefined}
+        sectionImageUrl={detailIngredient ? getSectionImageUrl(detailIngredient) : undefined}
         onClose={() => setDetailIngredient(null)}
         onDelete={id => { update(prev => prev.filter(i => i.id !== id)); setDetailIngredient(null) }}
         onFindRecipes={handleFindRecipes} />
