@@ -26,7 +26,7 @@ let nextId = 1000
 export default function Home() {
   const { keys, activeKey, activeId, loaded: keysLoaded, addKey, removeKey, activateKey, clearAll: clearKeys } = useApiKeys()
   const { ingredients, setAll, update, clearSection, clearAll: clearIngredients, initialized } = useIngredients()
-  const { locations, addLocation, removeLocation } = useCustomLocations()
+  const { locations, addLocation, updateLocation, removeLocation } = useCustomLocations()
 
   const [tab,              setTab]              = useState<Tab>('fridge')
   const [addModalSection,  setAddModalSection]  = useState<FridgeSection | null>(null)
@@ -151,12 +151,14 @@ export default function Home() {
                   onUncertainIngredient={ing => setUncertainPopup(ing)}
                   onTapIngredient={ing => setDetailIngredient(ing)}
                   onRetake={handleRetake}
+                  onUpdateLocation={updateLocation}
                   onOpenAddLocation={() => setAddLocationOpen(true)}
                 />
               )}
               {tab === 'recipes' && (
                 <RecipeList
                   ingredients={confirmedIngredients}
+                  apiKey={activeKey}
                   filterIngredient={recipeFilter}
                   onClearIngredientFilter={() => setRecipeFilter(null)}
                 />
@@ -229,6 +231,11 @@ export default function Home() {
         sectionImageUrl={detailIngredient ? getSectionImageUrl(detailIngredient) : undefined}
         onClose={() => setDetailIngredient(null)}
         onDelete={id => { update(prev => prev.filter(i => i.id !== id)); setDetailIngredient(null) }}
+        onUpdate={(id, patch) => {
+          update(prev => prev.map(i => i.id === id ? { ...i, ...patch } : i))
+          // detailIngredient도 업데이트
+          if (detailIngredient?.id === id) setDetailIngredient(prev => prev ? { ...prev, ...patch } : prev)
+        }}
         onFindRecipes={handleFindRecipes} />
 
       <SettingsSheet

@@ -42,8 +42,9 @@ export interface Recipe {
   steps: string[]
   tags: string[]
   calories?: number
-  youtubeQuery?: string  // YouTube 검색어
-  naverQuery?: string    // 네이버 레시피 검색어
+  youtubeQuery?: string
+  naverQuery?: string
+  additionalTips?: string[]  // 저렴한 추가재료 팁
 }
 
 export type FilterType = 'all' | '5min' | '10min' | 'high-match' | 'expiring'

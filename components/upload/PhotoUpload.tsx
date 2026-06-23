@@ -82,7 +82,7 @@ export function PhotoUpload({ onAnalyzeComplete, onOpenSettings, apiKey }: Photo
       <div className="text-center mb-8">
         <div className="text-5xl mb-4">🧊</div>
         <p className="text-white text-xl font-bold">사진 한 장으로 해결하는 요리</p>
-        <p className="text-zinc-500 text-sm mt-1.5">냉장고 문을 열고 정면 사진을 찍어주세요</p>
+        <p className="text-zinc-500 text-sm mt-1.5">냉장고 또는 재료 사진을 찍어주세요</p>
       </div>
 
       {analyzing ? (

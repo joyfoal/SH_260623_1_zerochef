@@ -27,6 +27,14 @@ export function useCustomLocations() {
     })
   }, [])
 
+  const updateLocation = useCallback((id: string, patch: Partial<Omit<CustomLocation, 'id'>>) => {
+    setLocations(prev => {
+      const next = prev.map(l => l.id === id ? { ...l, ...patch } : l)
+      persist(next)
+      return next
+    })
+  }, [])
+
   const removeLocation = useCallback((id: string) => {
     setLocations(prev => {
       const next = prev.filter(l => l.id !== id)
@@ -35,5 +43,5 @@ export function useCustomLocations() {
     })
   }, [])
 
-  return { locations, addLocation, removeLocation }
+  return { locations, addLocation, updateLocation, removeLocation }
 }

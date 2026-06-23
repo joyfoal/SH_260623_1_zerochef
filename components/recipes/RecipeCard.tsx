@@ -133,6 +133,21 @@ export function RecipeCard({ recipe, index }: RecipeCardProps) {
                 </ol>
               </div>
 
+              {/* 추가 재료 팁 */}
+              {recipe.additionalTips && recipe.additionalTips.length > 0 && (
+                <div className="bg-amber-950/30 border border-amber-800/40 rounded-xl p-3">
+                  <p className="text-amber-400 text-xs font-semibold mb-2">✨ 이것만 추가하면 더 맛있어요</p>
+                  <ul className="flex flex-col gap-1.5">
+                    {recipe.additionalTips.map((tip, i) => (
+                      <li key={i} className="flex items-start gap-2">
+                        <span className="text-amber-500 text-[10px] mt-0.5 shrink-0">+</span>
+                        <span className="text-amber-200/80 text-xs leading-relaxed">{tip}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
               {/* 참고 링크 */}
               <div>
                 <p className="text-zinc-400 text-xs font-medium mb-2">참고 사이트</p>

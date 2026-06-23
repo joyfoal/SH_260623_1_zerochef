@@ -1,8 +1,9 @@
 'use client'
 
 import { useRef, useState } from 'react'
-import { Plus, RefrigeratorIcon, Trash2, Camera, ImageIcon, MapPin, Loader2 } from 'lucide-react'
+import { Plus, RefrigeratorIcon, Trash2, Camera, ImageIcon, MapPin, Loader2, Pencil, Check, X } from 'lucide-react'
 import { Ingredient, FridgeSection, CustomLocation } from '@/lib/types'
+import { Input } from '@/components/ui/input'
 import { IngredientItem } from './IngredientItem'
 import { getSectionLabel } from '@/lib/utils'
 import { analyzeFridgeImage } from '@/app/actions/fridge'
@@ -33,6 +34,7 @@ interface FridgeViewProps {
   onUncertainIngredient: (ingredient: Ingredient) => void
   onTapIngredient: (ingredient: Ingredient) => void
   onRetake: (scope: 'fridge' | 'freezer' | string, items: Ingredient[], imageUrl: string) => void
+  onUpdateLocation: (id: string, patch: { name?: string; emoji?: string }) => void
   onOpenAddLocation: () => void
 }
 
@@ -40,7 +42,7 @@ export function FridgeView({
   ingredients, customLocations, apiKey,
   onDeleteIngredient, onClearSection, onClearAll,
   onAddIngredient, onUncertainIngredient, onTapIngredient,
-  onRetake, onOpenAddLocation,
+  onRetake, onUpdateLocation, onOpenAddLocation,
 }: FridgeViewProps) {
   const [confirmClearAll, setConfirmClearAll] = useState(false)
 
@@ -135,26 +137,20 @@ export function FridgeView({
 
       {/* 커스텀 장소들 */}
       {customLocations.map(loc => (
-        <div key={loc.id} className="rounded-2xl border-2 border-zinc-700 bg-zinc-900 overflow-hidden">
-          <SectionHeader
-            title={loc.name} emoji={loc.emoji}
-            itemCount={getBySection(loc.id).length}
-            scope={loc.id}
-            apiKey={apiKey}
-            sections={[loc.id]}
-            onRetake={onRetake}
-            onClear={() => onClearSection(loc.id)}
-          />
-          <ShelfRow
-            section={loc.id} icon={loc.emoji} label={loc.name}
-            ingredients={getBySection(loc.id)}
-            onAdd={() => onAddIngredient(loc.id)}
-            onDelete={onDeleteIngredient}
-            onUncertain={onUncertainIngredient}
-            onTap={onTapIngredient}
-            hideLabel
-          />
-        </div>
+        <CustomLocationBlock
+          key={loc.id}
+          location={loc}
+          itemCount={getBySection(loc.id).length}
+          ingredients={getBySection(loc.id)}
+          apiKey={apiKey}
+          onRetake={onRetake}
+          onClear={() => onClearSection(loc.id)}
+          onAdd={() => onAddIngredient(loc.id)}
+          onDelete={onDeleteIngredient}
+          onUncertain={onUncertainIngredient}
+          onTap={onTapIngredient}
+          onUpdateLocation={onUpdateLocation}
+        />
       ))}
 
       {/* 장소 추가 */}
@@ -316,6 +312,99 @@ function ShelfRow({ section, icon, label, hideLabel, ingredients, onAdd, onDelet
           </button>
         </div>
       )}
+    </div>
+  )
+}
+
+/* ── 커스텀 장소 블록 (이름/이모지 편집 포함) ── */
+interface CustomLocationBlockProps {
+  location: CustomLocation
+  itemCount: number
+  ingredients: Ingredient[]
+  apiKey: string
+  onRetake: (scope: string, items: Ingredient[], imageUrl: string) => void
+  onClear: () => void
+  onAdd: () => void
+  onDelete: (id: string) => void
+  onUncertain: (i: Ingredient) => void
+  onTap: (i: Ingredient) => void
+  onUpdateLocation: (id: string, patch: { name?: string; emoji?: string }) => void
+}
+
+const EMOJI_OPTIONS = ['🌶️','🏠','❄️','🗄️','📦','🍷','🧊','🥡','🫙','🍱','🥩','🥬']
+
+function CustomLocationBlock({
+  location, itemCount, ingredients, apiKey,
+  onRetake, onClear, onAdd, onDelete, onUncertain, onTap, onUpdateLocation,
+}: CustomLocationBlockProps) {
+  const [editing,   setEditing]   = useState(false)
+  const [editName,  setEditName]  = useState(location.name)
+  const [editEmoji, setEditEmoji] = useState(location.emoji)
+
+  const saveEdit = () => {
+    if (editName.trim()) {
+      onUpdateLocation(location.id, { name: editName.trim(), emoji: editEmoji })
+    }
+    setEditing(false)
+  }
+
+  return (
+    <div className="rounded-2xl border-2 border-zinc-700 bg-zinc-900 overflow-hidden">
+      {editing ? (
+        /* 인라인 편집 폼 */
+        <div className="px-4 py-3 bg-zinc-700/60 flex flex-col gap-2">
+          <div className="flex gap-2">
+            <button onClick={() => {}}
+              className="w-10 h-10 bg-zinc-800 border border-zinc-600 rounded-xl text-xl flex items-center justify-center shrink-0">
+              {editEmoji}
+            </button>
+            <Input value={editName} onChange={e => setEditName(e.target.value)}
+              className="flex-1 bg-zinc-800 border-zinc-600 text-white h-10 rounded-xl text-sm" />
+            <button onClick={saveEdit}
+              className="w-10 h-10 bg-green-600 hover:bg-green-500 rounded-xl flex items-center justify-center transition-all active:scale-90">
+              <Check className="w-4 h-4 text-white" />
+            </button>
+            <button onClick={() => setEditing(false)}
+              className="w-10 h-10 bg-zinc-700 hover:bg-zinc-600 rounded-xl flex items-center justify-center transition-all active:scale-90">
+              <X className="w-4 h-4 text-zinc-400" />
+            </button>
+          </div>
+          {/* 이모지 선택 */}
+          <div className="flex flex-wrap gap-1.5">
+            {EMOJI_OPTIONS.map(e => (
+              <button key={e} onClick={() => setEditEmoji(e)}
+                className={`w-8 h-8 rounded-lg text-base transition-all active:scale-90 ${
+                  editEmoji === e ? 'bg-green-600' : 'bg-zinc-800 hover:bg-zinc-700'
+                }`}>
+                {e}
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : (
+        /* 일반 헤더 */
+        <div className="flex items-center gap-1 pl-1 pr-1">
+          <div className="flex-1">
+            <SectionHeader
+              title={location.name} emoji={location.emoji}
+              itemCount={itemCount} scope={location.id}
+              apiKey={apiKey} sections={[location.id]}
+              onRetake={onRetake} onClear={onClear}
+            />
+          </div>
+          <button onClick={() => { setEditName(location.name); setEditEmoji(location.emoji); setEditing(true) }}
+            className="w-8 h-8 flex items-center justify-center text-zinc-600 hover:text-zinc-400 transition-colors mr-1 shrink-0">
+            <Pencil className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+      <ShelfRow
+        section={location.id} icon={location.emoji} label={location.name}
+        ingredients={ingredients}
+        onAdd={onAdd} onDelete={onDelete}
+        onUncertain={onUncertain} onTap={onTap}
+        hideLabel
+      />
     </div>
   )
 }
