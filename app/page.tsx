@@ -6,6 +6,8 @@ import { Ingredient, FridgeSection, CustomLocation } from '@/lib/types'
 import { useApiKeys } from '@/hooks/useApiKeys'
 import { useIngredients } from '@/hooks/useIngredients'
 import { useCustomLocations } from '@/hooks/useCustomLocations'
+import { useModel } from '@/hooks/useModel'
+import { getModelById } from '@/lib/models'
 import { getEnvKeyStatus } from '@/app/actions/fridge'
 import { PhotoUpload } from '@/components/upload/PhotoUpload'
 import { FridgeView } from '@/components/fridge/FridgeView'
@@ -28,6 +30,10 @@ export default function Home() {
   const { keys, activeKey, activeId, loaded: keysLoaded, addKey, removeKey, activateKey, clearAll: clearKeys } = useApiKeys()
   const { ingredients, setAll, update, clearSection, clearAll: clearIngredients, initialized } = useIngredients()
   const { locations, addLocation, updateLocation, removeLocation } = useCustomLocations()
+  const { modelId, setModelId } = useModel()
+
+  // 비전 미지원 모델이면 이미지 분석엔 GPT-4o fallback
+  const visionModelId = getModelById(modelId).hasVision ? modelId : 'openai/gpt-4o'
 
   const [tab,              setTab]              = useState<Tab>('fridge')
   const [addModalSection,  setAddModalSection]  = useState<FridgeSection | null>(null)
@@ -144,6 +150,7 @@ export default function Home() {
               onAnalyzeComplete={handleAnalyzeComplete}
               onOpenSettings={() => setSettingsOpen(true)}
               apiKey={hasKey ? (activeKey || '__env__') : ''}
+              model={visionModelId}
             />
           ) : (
             <>
@@ -158,6 +165,7 @@ export default function Home() {
                   onAddIngredient={s => setAddModalSection(s)}
                   onUncertainIngredient={ing => setUncertainPopup(ing)}
                   onTapIngredient={ing => setDetailIngredient(ing)}
+                  model={visionModelId}
                   onRetake={handleRetake}
                   onUpdateLocation={updateLocation}
                   onOpenAddLocation={() => setAddLocationOpen(true)}
@@ -167,6 +175,7 @@ export default function Home() {
                 <RecipeList
                   ingredients={confirmedIngredients}
                   apiKey={activeKey}
+                  model={modelId}
                   hasKey={hasKey}
                   filterIngredient={recipeFilter}
                   onClearIngredientFilter={() => setRecipeFilter(null)}
@@ -218,7 +227,7 @@ export default function Home() {
         onClose={() => setAddModalSection(null)} onAdd={handleAddConfirm} />
 
       <AddLocationModal
-        open={addLocationOpen} apiKey={hasKey ? (activeKey || '__env__') : ''}
+        open={addLocationOpen} apiKey={hasKey ? (activeKey || '__env__') : ''} model={visionModelId}
         onAdd={handleAddLocation} onClose={() => setAddLocationOpen(false)}
         onOpenSettings={() => { setAddLocationOpen(false); setSettingsOpen(true) }} />
 
@@ -251,6 +260,7 @@ export default function Home() {
         open={settingsOpen}
         keys={keys} activeId={activeId}
         envKeyConfigured={envKeyConfigured}
+        selectedModel={modelId} onSelectModel={setModelId}
         onAddKey={addKey} onRemoveKey={removeKey} onActivateKey={activateKey}
         onReset={handleReset} onClose={() => setSettingsOpen(false)} />
     </div>

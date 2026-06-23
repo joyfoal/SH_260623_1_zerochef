@@ -13,12 +13,13 @@ import { getRecipeRecommendations } from '@/app/actions/fridge'
 interface RecipeListProps {
   ingredients: Ingredient[]
   apiKey: string
+  model?: string
   hasKey?: boolean
   filterIngredient?: string | null
   onClearIngredientFilter?: () => void
 }
 
-export function RecipeList({ ingredients, apiKey, hasKey, filterIngredient, onClearIngredientFilter }: RecipeListProps) {
+export function RecipeList({ ingredients, apiKey, model, hasKey, filterIngredient, onClearIngredientFilter }: RecipeListProps) {
   const [filter,      setFilter]      = useState<FilterType>('all')
   const [aiRecipes,   setAiRecipes]   = useState<Recipe[] | null>(null)
   const [loading,     setLoading]     = useState(false)
@@ -48,7 +49,7 @@ export function RecipeList({ ingredients, apiKey, hasKey, filterIngredient, onCl
       const names = ingredients
         .filter(i => i.status === 'confirmed' && !i.isBasicSeasoning)
         .map(i => i.name)
-      const result = await getRecipeRecommendations(names, apiKey, target)
+      const result = await getRecipeRecommendations(names, apiKey, target, model)
       setAiRecipes(result as Recipe[])
     } catch (e: any) {
       setError(e?.message?.includes('401')

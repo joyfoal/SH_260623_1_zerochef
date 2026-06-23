@@ -15,9 +15,10 @@ interface PhotoUploadProps {
   onAnalyzeComplete: (ingredients: Ingredient[], imageUrl: string) => void
   onOpenSettings: () => void
   apiKey: string
+  model?: string
 }
 
-export function PhotoUpload({ onAnalyzeComplete, onOpenSettings, apiKey }: PhotoUploadProps) {
+export function PhotoUpload({ onAnalyzeComplete, onOpenSettings, apiKey, model }: PhotoUploadProps) {
   const cameraRef  = useRef<HTMLInputElement>(null)
   const galleryRef = useRef<HTMLInputElement>(null)
 
@@ -39,7 +40,7 @@ export function PhotoUpload({ onAnalyzeComplete, onOpenSettings, apiKey }: Photo
       const base64 = await fileToBase64(file)
 
       setStatusLabel('AI가 식재료를 인식하고 있어요...'); setProgress(40)
-      const result = await analyzeFridgeImage(base64, apiKey)
+      const result = await analyzeFridgeImage(base64, apiKey, model)
 
       setProgress(90); setStatusLabel('완료!')
       await new Promise(r => setTimeout(r, 400))

@@ -27,6 +27,7 @@ interface FridgeViewProps {
   ingredients: Ingredient[]
   customLocations: CustomLocation[]
   apiKey: string
+  model?: string
   onDeleteIngredient: (id: string) => void
   onClearSection: (section: FridgeSection) => void
   onClearAll: () => void
@@ -41,7 +42,7 @@ interface FridgeViewProps {
 type BuiltinEdit = { scope: 'fridge' | 'freezer'; name: string; emoji: string; temp: string }
 
 export function FridgeView({
-  ingredients, customLocations, apiKey,
+  ingredients, customLocations, apiKey, model,
   onDeleteIngredient, onClearSection, onClearAll,
   onAddIngredient, onUncertainIngredient, onTapIngredient,
   onRetake, onUpdateLocation, onOpenAddLocation,
@@ -109,7 +110,7 @@ export function FridgeView({
         ) : (
           <SectionHeader
             title={builtinNames.fridge.name} temp={builtinNames.fridge.temp} emoji={builtinNames.fridge.emoji}
-            itemCount={fridgeCount} scope="fridge" apiKey={apiKey}
+            itemCount={fridgeCount} scope="fridge" apiKey={apiKey} model={model}
             sections={FRIDGE_SHELF_SECTIONS} onRetake={onRetake} onClear={clearFridgeSections}
             onEdit={() => setEditingBuiltin({ scope: 'fridge', ...builtinNames.fridge })}
           />
@@ -142,7 +143,7 @@ export function FridgeView({
         ) : (
           <SectionHeader
             title={builtinNames.freezer.name} temp={builtinNames.freezer.temp} emoji={builtinNames.freezer.emoji}
-            itemCount={freezerCount} scope="freezer" apiKey={apiKey}
+            itemCount={freezerCount} scope="freezer" apiKey={apiKey} model={model}
             sections={['freezer']} onRetake={onRetake} onClear={() => onClearSection('freezer')}
             onEdit={() => setEditingBuiltin({ scope: 'freezer', ...builtinNames.freezer })}
           />
@@ -163,7 +164,7 @@ export function FridgeView({
           location={loc}
           itemCount={getBySection(loc.id).length}
           ingredients={getBySection(loc.id)}
-          apiKey={apiKey}
+          apiKey={apiKey} model={model}
           onRetake={onRetake}
           onClear={() => onClearSection(loc.id)}
           onAdd={() => onAddIngredient(loc.id)}
@@ -199,12 +200,13 @@ interface SectionHeaderProps {
   scope: 'fridge' | 'freezer' | string
   sections: FridgeSection[]
   apiKey: string
+  model?: string
   onRetake: (scope: 'fridge' | 'freezer' | string, items: Ingredient[], imageUrl: string) => void
   onClear: () => void
   onEdit?: () => void
 }
 
-function SectionHeader({ title, emoji, temp, itemCount, scope, sections, apiKey, onRetake, onClear, onEdit }: SectionHeaderProps) {
+function SectionHeader({ title, emoji, temp, itemCount, scope, sections, apiKey, model, onRetake, onClear, onEdit }: SectionHeaderProps) {
   const cameraRef  = useRef<HTMLInputElement>(null)
   const galleryRef = useRef<HTMLInputElement>(null)
   const [scanning,      setScanning]      = useState(false)
@@ -216,7 +218,7 @@ function SectionHeader({ title, emoji, temp, itemCount, scope, sections, apiKey,
     const imageUrl = URL.createObjectURL(file)
     try {
       const base64 = await fileToBase64(file)
-      const result = await analyzeFridgeImage(base64, apiKey)
+      const result = await analyzeFridgeImage(base64, apiKey, model)
       const items  = result.map((item, idx) => ({
         ...item,
         id: `${scope}-${Date.now()}-${idx}`,
@@ -389,6 +391,7 @@ interface CustomLocationBlockProps {
   itemCount: number
   ingredients: Ingredient[]
   apiKey: string
+  model?: string
   onRetake: (scope: string, items: Ingredient[], imageUrl: string) => void
   onClear: () => void
   onAdd: () => void
@@ -401,7 +404,7 @@ interface CustomLocationBlockProps {
 const EMOJI_OPTIONS = ['🌶️','🏠','❄️','🗄️','📦','🍷','🧊','🥡','🫙','🍱','🥩','🥬']
 
 function CustomLocationBlock({
-  location, itemCount, ingredients, apiKey,
+  location, itemCount, ingredients, apiKey, model,
   onRetake, onClear, onAdd, onDelete, onUncertain, onTap, onUpdateLocation,
 }: CustomLocationBlockProps) {
   const [editing,   setEditing]   = useState(false)
@@ -452,7 +455,7 @@ function CustomLocationBlock({
         <SectionHeader
           title={location.name} emoji={location.emoji}
           itemCount={itemCount} scope={location.id}
-          apiKey={apiKey} sections={[location.id]}
+          apiKey={apiKey} model={model} sections={[location.id]}
           onRetake={onRetake} onClear={onClear}
           onEdit={() => { setEditName(location.name); setEditEmoji(location.emoji); setEditing(true) }}
         />

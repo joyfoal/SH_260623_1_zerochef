@@ -19,12 +19,13 @@ const LOCATION_PRESETS = [
 interface AddLocationModalProps {
   open: boolean
   apiKey: string
+  model?: string
   onAdd: (location: CustomLocation, ingredients: Ingredient[], imageUrl?: string) => void
   onClose: () => void
   onOpenSettings?: () => void
 }
 
-export function AddLocationModal({ open, apiKey, onAdd, onClose, onOpenSettings }: AddLocationModalProps) {
+export function AddLocationModal({ open, apiKey, model, onAdd, onClose, onOpenSettings }: AddLocationModalProps) {
   const cameraRef  = useRef<HTMLInputElement>(null)
   const galleryRef = useRef<HTMLInputElement>(null)
   const [name, setName]       = useState('')
@@ -45,7 +46,7 @@ export function AddLocationModal({ open, apiKey, onAdd, onClose, onOpenSettings 
       setProgress(40)
       const base64 = await fileToJpegBase64(file)
       setProgress(70)
-      const result = await analyzeFridgeImage(base64, apiKey)
+      const result = await analyzeFridgeImage(base64, apiKey, model)
       setProgress(95)
       const newIngredients: Ingredient[] = result.map((item, idx) => ({
         ...item, id: `${locationId}-${idx}`, section: locationId,

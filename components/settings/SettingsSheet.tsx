@@ -2,15 +2,18 @@
 
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Plus, Trash2, Check, Key, ChevronLeft, AlertTriangle, Eye, EyeOff, ExternalLink } from 'lucide-react'
+import { X, Plus, Trash2, Check, Key, ChevronLeft, AlertTriangle, Eye, EyeOff, ExternalLink, Cpu } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { ApiKeyEntry } from '@/hooks/useApiKeys'
+import { OPENROUTER_MODELS, ModelInfo } from '@/lib/models'
 
 interface SettingsSheetProps {
   open: boolean
   keys: ApiKeyEntry[]
   activeId: string
   envKeyConfigured: boolean
+  selectedModel: string
+  onSelectModel: (id: string) => void
   onAddKey: (label: string, key: string) => void
   onRemoveKey: (id: string) => void
   onActivateKey: (id: string) => void
@@ -19,7 +22,8 @@ interface SettingsSheetProps {
 }
 
 export function SettingsSheet({
-  open, keys, activeId, envKeyConfigured, onAddKey, onRemoveKey, onActivateKey, onReset, onClose,
+  open, keys, activeId, envKeyConfigured, selectedModel, onSelectModel,
+  onAddKey, onRemoveKey, onActivateKey, onReset, onClose,
 }: SettingsSheetProps) {
   const [view, setView]         = useState<'main' | 'add'>('main')
   const [newLabel, setNewLabel] = useState('')
@@ -190,6 +194,57 @@ export function SettingsSheet({
                           </a>
                         </div>
                       </div>
+                    </section>
+
+                    {/* ── AI 모델 선택 ── */}
+                    <section className="border-t border-zinc-800 pt-4">
+                      <div className="flex items-center gap-2 mb-3">
+                        <Cpu className="w-4 h-4 text-zinc-400" />
+                        <h3 className="text-zinc-300 text-sm font-bold">AI 모델 선택</h3>
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        {OPENROUTER_MODELS.map(m => {
+                          const active = m.id === selectedModel
+                          return (
+                            <button key={m.id} onClick={() => onSelectModel(m.id)}
+                              className={`flex items-center gap-3 p-3 rounded-2xl border transition-all active:scale-[0.98] text-left ${
+                                active
+                                  ? 'border-green-500/50 bg-green-950/20'
+                                  : 'border-zinc-700 bg-zinc-800/40 hover:border-zinc-600'
+                              }`}>
+                              <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 text-base ${
+                                active ? 'bg-green-500/20' : 'bg-zinc-700'
+                              }`}>
+                                {m.providerEmoji}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-white text-sm font-semibold truncate">{m.name}</span>
+                                  {m.badge && (
+                                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full text-white shrink-0 ${m.color}`}>
+                                      {m.badge}
+                                    </span>
+                                  )}
+                                  {!m.hasVision && (
+                                    <span className="text-[10px] text-amber-400 bg-amber-400/10 px-1.5 py-0.5 rounded-full shrink-0">
+                                      텍스트전용
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="text-zinc-500 text-xs mt-0.5">{m.provider} · OpenRouter</p>
+                              </div>
+                              <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${
+                                active ? 'border-green-400 bg-green-400' : 'border-zinc-600'
+                              }`}>
+                                {active && <Check className="w-3 h-3 text-black" />}
+                              </div>
+                            </button>
+                          )
+                        })}
+                      </div>
+                      <p className="text-zinc-600 text-[10px] mt-2 leading-relaxed">
+                        텍스트전용 모델은 레시피 추천에만 사용 가능합니다. 이미지 분석 시 자동으로 GPT-4o로 전환됩니다.
+                      </p>
                     </section>
 
                     {/* ── 앱 초기화 ── */}

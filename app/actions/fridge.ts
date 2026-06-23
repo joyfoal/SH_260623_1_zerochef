@@ -2,8 +2,8 @@
 
 import OpenAI from 'openai'
 import { Ingredient, Recipe } from '@/lib/types'
+import { DEFAULT_MODEL_ID } from '@/lib/models'
 
-// 환경변수 우선, 없으면 클라이언트 전달값 사용
 function getClient(apiKey?: string) {
   const key = process.env.OPENROUTER_API_KEY || apiKey
   if (!key) throw new Error('API 키가 설정되지 않았습니다.')
@@ -17,19 +17,20 @@ function getClient(apiKey?: string) {
   })
 }
 
-// 환경변수 설정 여부만 클라이언트에 알려줌 (키값은 노출 안 함)
 export async function getEnvKeyStatus(): Promise<{ configured: boolean }> {
   return { configured: !!process.env.OPENROUTER_API_KEY }
 }
 
 export async function analyzeFridgeImage(
   imageBase64: string,
-  apiKey?: string
+  apiKey?: string,
+  model?: string,
 ): Promise<Partial<Ingredient>[]> {
+  const useModel = model || DEFAULT_MODEL_ID
   try {
     const openai = getClient(apiKey)
     const response = await openai.chat.completions.create({
-      model: 'openai/gpt-4o',
+      model: useModel,
       max_tokens: 2048,
       messages: [
         {
@@ -74,8 +75,10 @@ JSON 배열만 반환:`,
 export async function getRecipeRecommendations(
   ingredientNames: string[],
   apiKey?: string,
-  targetIngredient?: string
+  targetIngredient?: string,
+  model?: string,
 ): Promise<Partial<Recipe>[]> {
+  const useModel = model || DEFAULT_MODEL_ID
   try {
     const openai = getClient(apiKey)
     const targetLine = targetIngredient
@@ -83,7 +86,7 @@ export async function getRecipeRecommendations(
       : ''
 
     const response = await openai.chat.completions.create({
-      model: 'openai/gpt-4o',
+      model: useModel,
       max_tokens: 4000,
       messages: [
         {
