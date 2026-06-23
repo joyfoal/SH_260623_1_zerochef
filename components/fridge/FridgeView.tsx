@@ -1,12 +1,11 @@
 'use client'
 
 import { useRef, useState } from 'react'
-import { Plus, RefrigeratorIcon, Trash2, Camera, ImageIcon, MapPin } from 'lucide-react'
+import { Plus, RefrigeratorIcon, Trash2, Camera, ImageIcon, MapPin, Loader2 } from 'lucide-react'
 import { Ingredient, FridgeSection, CustomLocation } from '@/lib/types'
 import { IngredientItem } from './IngredientItem'
 import { getSectionLabel } from '@/lib/utils'
 import { analyzeFridgeImage } from '@/app/actions/fridge'
-import { MOCK_INGREDIENTS } from '@/lib/mock-data'
 
 const BUILTIN_SECTIONS: FridgeSection[] = [
   'top-shelf', 'middle-shelf', 'bottom-shelf', 'crisper',
@@ -40,8 +39,8 @@ export function FridgeView({
 }: FridgeViewProps) {
   const [confirmClearAll, setConfirmClearAll] = useState(false)
 
-  const confirmedIngredients = ingredients.filter(i => i.status === 'confirmed')
-  const uncertainIngredients = ingredients.filter(i => i.status === 'uncertain')
+  const confirmedIngredients  = ingredients.filter(i => i.status === 'confirmed')
+  const uncertainIngredients  = ingredients.filter(i => i.status === 'uncertain')
 
   const getBySection = (section: FridgeSection) =>
     confirmedIngredients.filter(i => i.section === section)
@@ -62,7 +61,7 @@ export function FridgeView({
 
   return (
     <div className="flex flex-col gap-3 pb-4">
-      {/* Stats bar */}
+      {/* 통계 바 + 전체비우기 */}
       <div className="flex items-center gap-3 px-3 py-3 bg-zinc-900 rounded-2xl border border-zinc-800">
         <RefrigeratorIcon className="w-5 h-5 text-green-400 shrink-0" />
         <span className="text-white text-sm font-semibold">{confirmedIngredients.length}가지 재료</span>
@@ -73,7 +72,7 @@ export function FridgeView({
         )}
         {confirmedIngredients.length > 0 && (
           <button onClick={handleClearAll}
-            className={`ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
+            className={`ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all active:scale-95 ${
               confirmClearAll ? 'bg-red-600 text-white' : 'bg-zinc-800 text-zinc-500 hover:text-red-400'
             }`}>
             <Trash2 className="w-3 h-3" />
@@ -82,10 +81,10 @@ export function FridgeView({
         )}
       </div>
 
-      <p className="text-center text-zinc-600 text-xs">← 스와이프 삭제  ·  탭으로 상세 보기  ·  📷 구역별 재촬영</p>
+      <p className="text-center text-zinc-600 text-[11px]">← 스와이프로 삭제  ·  탭으로 상세보기  ·  📷 로 재촬영</p>
 
       {/* 냉장고 본체 */}
-      <div className="rounded-2xl border-4 border-zinc-700 bg-gradient-to-b from-zinc-800 to-zinc-900 overflow-hidden fridge-glow">
+      <div className="rounded-2xl border-4 border-zinc-700 bg-gradient-to-b from-zinc-800 to-zinc-900 overflow-hidden">
         <div className="bg-zinc-700/80 px-4 py-2.5 flex items-center justify-between">
           <span className="text-sm text-zinc-200 font-bold">냉장실</span>
           <div className="flex items-center gap-1.5">
@@ -98,17 +97,11 @@ export function FridgeView({
           {allSections.map(({ section, label, icon, isCustom }) => (
             <FridgeSectionRow
               key={section}
-              section={section}
-              label={label}
-              icon={icon}
-              isCustom={isCustom}
-              ingredients={getBySection(section)}
-              apiKey={apiKey}
-              onDelete={onDeleteIngredient}
-              onClearSection={onClearSection}
+              section={section} label={label} icon={icon} isCustom={isCustom}
+              ingredients={getBySection(section)} apiKey={apiKey}
+              onDelete={onDeleteIngredient} onClearSection={onClearSection}
               onAdd={() => onAddIngredient(section)}
-              onUncertain={onUncertainIngredient}
-              onTap={onTapIngredient}
+              onUncertain={onUncertainIngredient} onTap={onTapIngredient}
               onAddIngredients={items => onAddSectionIngredients(section, items)}
             />
           ))}
@@ -129,7 +122,7 @@ export function FridgeView({
         />
       </div>
 
-      {/* + 장소 추가 버튼 */}
+      {/* 장소 추가 버튼 */}
       <button onClick={onOpenAddLocation}
         className="flex items-center justify-center gap-2.5 py-4 rounded-2xl border-2 border-dashed border-zinc-700 text-zinc-500 hover:border-green-500/50 hover:text-green-400 transition-all active:scale-[0.98]">
         <MapPin className="w-4 h-4" />
@@ -155,14 +148,10 @@ export function FridgeView({
   )
 }
 
-/* ── 구역 행 컴포넌트 ── */
+/* ── 구역 행 ── */
 interface SectionRowProps {
-  section: FridgeSection
-  label: string
-  icon: string
-  isCustom: boolean
-  ingredients: Ingredient[]
-  apiKey: string
+  section: FridgeSection; label: string; icon: string; isCustom: boolean
+  ingredients: Ingredient[]; apiKey: string
   onDelete: (id: string) => void
   onClearSection: (s: FridgeSection) => void
   onAdd: () => void
@@ -175,10 +164,10 @@ function FridgeSectionRow({
   section, label, icon, isCustom, ingredients, apiKey,
   onDelete, onClearSection, onAdd, onUncertain, onTap, onAddIngredients,
 }: SectionRowProps) {
-  const cameraRef = useRef<HTMLInputElement>(null)
+  const cameraRef  = useRef<HTMLInputElement>(null)
   const galleryRef = useRef<HTMLInputElement>(null)
   const [confirmClear, setConfirmClear] = useState(false)
-  const [scanning, setScanning] = useState(false)
+  const [scanning, setScanning]         = useState(false)
 
   const handleClear = (e: React.MouseEvent) => {
     e.stopPropagation()
@@ -187,27 +176,21 @@ function FridgeSectionRow({
   }
 
   const handleRetake = async (file: File) => {
+    if (!apiKey) return
     setScanning(true)
-    let items: Ingredient[] = []
-    if (apiKey) {
-      try {
-        const base64 = await new Promise<string>((res, rej) => {
-          const r = new FileReader(); r.onload = () => res((r.result as string).split(',')[1])
-          r.onerror = rej; r.readAsDataURL(file)
-        })
-        const result = await analyzeFridgeImage(base64, apiKey)
-        items = result.map((item, idx) => ({
-          ...item, id: `${section}-${Date.now()}-${idx}`, section,
-          status: (item.status ?? 'confirmed') as Ingredient['status'],
-        } as Ingredient))
-      } catch {}
-    } else {
-      await new Promise(r => setTimeout(r, 1000))
-      items = MOCK_INGREDIENTS.slice(0, 3).map((ing, idx) => ({
-        ...ing, id: `${section}-${Date.now()}-${idx}`, section,
-      }))
-    }
-    onAddIngredients(items)
+    try {
+      const base64 = await new Promise<string>((res, rej) => {
+        const r = new FileReader()
+        r.onload = () => res((r.result as string).split(',')[1])
+        r.onerror = rej; r.readAsDataURL(file)
+      })
+      const result = await analyzeFridgeImage(base64, apiKey)
+      const items  = result.map((item, idx) => ({
+        ...item, id: `${section}-${Date.now()}-${idx}`, section,
+        status: (item.status ?? 'confirmed') as Ingredient['status'],
+      } as Ingredient))
+      onAddIngredients(items)
+    } catch {}
     setScanning(false)
   }
 
@@ -217,15 +200,11 @@ function FridgeSectionRow({
 
   return (
     <>
-      <input ref={cameraRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleFileChange} />
+      <input ref={cameraRef}  type="file" accept="image/*" capture="environment" className="hidden" onChange={handleFileChange} />
       <input ref={galleryRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
 
-      <div className="px-3 py-3 min-h-[64px] cursor-pointer group"
-        onClick={e => {
-          if ((e.target as HTMLElement).closest('[data-no-add]')) return
-          onAdd()
-        }}
-      >
+      <div className="px-3 py-3 min-h-[64px]"
+        onClick={e => { if ((e.target as HTMLElement).closest('[data-no-add]')) return; onAdd() }}>
         {/* 섹션 헤더 */}
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
@@ -235,32 +214,30 @@ function FridgeSectionRow({
               <span className="text-zinc-600 text-[10px]">({ingredients.length})</span>
             )}
             {scanning && (
-              <span className="text-green-400 text-[10px] animate-pulse">스캔 중...</span>
+              <span className="flex items-center gap-1 text-green-400 text-[10px]">
+                <Loader2 className="w-3 h-3 animate-spin" />스캔 중
+              </span>
             )}
           </div>
 
-          {/* 액션 버튼들 */}
+          {/* 재촬영 + 비우기 — 항상 표시 */}
           <div className="flex items-center gap-1" data-no-add="true" onClick={e => e.stopPropagation()}>
-            {/* 재촬영 드롭다운 */}
-            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-              <button onClick={() => cameraRef.current?.click()}
-                className="w-7 h-7 flex items-center justify-center rounded-lg bg-zinc-700 hover:bg-green-700 text-zinc-400 hover:text-white transition-all"
-                title="카메라로 재촬영">
-                <Camera className="w-3.5 h-3.5" />
-              </button>
-              <button onClick={() => galleryRef.current?.click()}
-                className="w-7 h-7 flex items-center justify-center rounded-lg bg-zinc-700 hover:bg-zinc-600 text-zinc-400 hover:text-white transition-all"
-                title="앨범에서 재촬영">
-                <ImageIcon className="w-3.5 h-3.5" />
-              </button>
-            </div>
+            <button onClick={() => cameraRef.current?.click()} disabled={!apiKey}
+              title="카메라로 재촬영"
+              className="w-7 h-7 flex items-center justify-center rounded-lg bg-zinc-800 hover:bg-green-700 text-zinc-500 hover:text-white disabled:opacity-30 transition-all">
+              <Camera className="w-3.5 h-3.5" />
+            </button>
+            <button onClick={() => galleryRef.current?.click()} disabled={!apiKey}
+              title="앨범에서 선택"
+              className="w-7 h-7 flex items-center justify-center rounded-lg bg-zinc-800 hover:bg-zinc-600 text-zinc-500 hover:text-white disabled:opacity-30 transition-all">
+              <ImageIcon className="w-3.5 h-3.5" />
+            </button>
             {ingredients.length > 0 && (
               <button onClick={handleClear}
-                className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-medium transition-all ${
-                  confirmClear ? 'bg-red-600 text-white' : 'text-zinc-600 hover:text-red-400 opacity-0 group-hover:opacity-100'
+                className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold transition-all ${
+                  confirmClear ? 'bg-red-600 text-white' : 'bg-zinc-800 text-zinc-600 hover:text-red-400'
                 }`}>
-                <Trash2 className="w-3 h-3" />
-                {confirmClear ? '확인' : '비우기'}
+                <Trash2 className="w-3 h-3" />{confirmClear ? '확인' : '비우기'}
               </button>
             )}
           </div>
@@ -268,7 +245,7 @@ function FridgeSectionRow({
 
         {/* 재료 목록 */}
         {ingredients.length === 0 ? (
-          <div className="flex items-center gap-2 text-zinc-600 group-hover:text-zinc-400 transition-colors">
+          <div className="flex items-center gap-2 text-zinc-700 hover:text-zinc-500 transition-colors cursor-pointer">
             <Plus className="w-4 h-4" />
             <span className="text-sm">터치해서 재료 추가</span>
           </div>
@@ -282,7 +259,7 @@ function FridgeSectionRow({
               </div>
             ))}
             <button data-no-add="true" onClick={e => { e.stopPropagation(); onAdd() }}
-              className="w-9 h-9 flex items-center justify-center rounded-xl border border-dashed border-zinc-600 text-zinc-600 hover:border-green-500/50 hover:text-green-500 transition-colors">
+              className="w-9 h-9 flex items-center justify-center rounded-xl border border-dashed border-zinc-700 text-zinc-600 hover:border-green-500/50 hover:text-green-500 transition-colors">
               <Plus className="w-4 h-4" />
             </button>
           </div>

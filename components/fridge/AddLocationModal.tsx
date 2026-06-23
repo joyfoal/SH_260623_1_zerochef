@@ -2,11 +2,10 @@
 
 import { useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Camera, ImageIcon, Loader2 } from 'lucide-react'
+import { X, Camera, ImageIcon, Loader2, Settings } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { CustomLocation, Ingredient } from '@/lib/types'
 import { analyzeFridgeImage } from '@/app/actions/fridge'
-import { MOCK_INGREDIENTS } from '@/lib/mock-data'
 
 const LOCATION_PRESETS = [
   { name: '김치냉장고', emoji: '🌶️' },
@@ -22,73 +21,69 @@ interface AddLocationModalProps {
   apiKey: string
   onAdd: (location: CustomLocation, ingredients: Ingredient[]) => void
   onClose: () => void
+  onOpenSettings?: () => void
 }
 
-export function AddLocationModal({ open, apiKey, onAdd, onClose }: AddLocationModalProps) {
-  const cameraRef = useRef<HTMLInputElement>(null)
+export function AddLocationModal({ open, apiKey, onAdd, onClose, onOpenSettings }: AddLocationModalProps) {
+  const cameraRef  = useRef<HTMLInputElement>(null)
   const galleryRef = useRef<HTMLInputElement>(null)
-  const [name, setName] = useState('')
-  const [emoji, setEmoji] = useState('📦')
+  const [name, setName]       = useState('')
+  const [emoji, setEmoji]     = useState('📦')
   const [analyzing, setAnalyzing] = useState(false)
-  const [progress, setProgress] = useState(0)
+  const [progress,  setProgress]  = useState(0)
 
   const reset = () => { setName(''); setEmoji('📦'); setAnalyzing(false); setProgress(0) }
 
   const handlePhoto = async (file: File) => {
-    if (!name.trim()) return
-    setAnalyzing(true)
-    setProgress(20)
+    if (!name.trim() || !apiKey) return
+    setAnalyzing(true); setProgress(20)
     const locationId = `custom-${Date.now()}`
     const location: CustomLocation = { id: locationId, name: name.trim(), emoji }
-    let newIngredients: Ingredient[] = []
 
-    if (apiKey) {
-      try {
-        setProgress(40)
-        const base64 = await new Promise<string>((res, rej) => {
-          const r = new FileReader()
-          r.onload = () => res((r.result as string).split(',')[1])
-          r.onerror = rej
-          r.readAsDataURL(file)
-        })
-        setProgress(60)
-        const result = await analyzeFridgeImage(base64, apiKey)
-        setProgress(90)
-        newIngredients = result.map((item, idx) => ({
-          ...item, id: `${locationId}-${idx}`, section: locationId,
-          status: (item.status ?? 'confirmed') as Ingredient['status'],
-        } as Ingredient))
-      } catch { newIngredients = [] }
-    } else {
-      await new Promise(r => setTimeout(r, 1200))
-      setProgress(90)
-      newIngredients = MOCK_INGREDIENTS.slice(0, 4).map((ing, idx) => ({
-        ...ing, id: `${locationId}-${idx}`, section: locationId,
-      }))
+    try {
+      setProgress(40)
+      const base64 = await new Promise<string>((res, rej) => {
+        const r = new FileReader()
+        r.onload = () => res((r.result as string).split(',')[1])
+        r.onerror = rej; r.readAsDataURL(file)
+      })
+      setProgress(70)
+      const result = await analyzeFridgeImage(base64, apiKey)
+      setProgress(95)
+      const newIngredients: Ingredient[] = result.map((item, idx) => ({
+        ...item, id: `${locationId}-${idx}`, section: locationId,
+        status: (item.status ?? 'confirmed') as Ingredient['status'],
+      } as Ingredient))
+      await new Promise(r => setTimeout(r, 300))
+      onAdd(location, newIngredients)
+    } catch {
+      onAdd(location, [])
     }
-
-    setProgress(100)
-    await new Promise(r => setTimeout(r, 300))
-    onAdd(location, newIngredients)
     reset(); onClose()
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0]
-    if (f) handlePhoto(f)
-    e.target.value = ''
+    const f = e.target.files?.[0]; if (f) handlePhoto(f); e.target.value = ''
+  }
+
+  const handleAddWithoutPhoto = () => {
+    if (!name.trim()) return
+    const locationId = `custom-${Date.now()}`
+    onAdd({ id: locationId, name: name.trim(), emoji }, [])
+    reset(); onClose()
   }
 
   return (
     <>
-      <input ref={cameraRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleChange} />
+      <input ref={cameraRef}  type="file" accept="image/*" capture="environment" className="hidden" onChange={handleChange} />
       <input ref={galleryRef} type="file" accept="image/*" className="hidden" onChange={handleChange} />
 
       <AnimatePresence>
         {open && (
           <>
             <motion.div key="bd" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm" onClick={() => { reset(); onClose() }} />
+              className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"
+              onClick={() => { reset(); onClose() }} />
 
             <motion.div key="sh"
               initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
@@ -150,25 +145,40 @@ export function AddLocationModal({ open, apiKey, onAdd, onClose }: AddLocationMo
                         ))}
                       </div>
 
-                      {/* 촬영 */}
-                      <div className="flex flex-col gap-2">
-                        <p className="text-zinc-400 text-sm font-medium">사진으로 재료 인식하기</p>
-                        <div className="flex gap-2">
-                          <button onClick={() => cameraRef.current?.click()} disabled={!name.trim()}
-                            className="flex-1 flex flex-col items-center gap-1.5 py-4 rounded-xl bg-green-600 hover:bg-green-500 disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.98] transition-all">
-                            <Camera className="w-6 h-6 text-white" />
-                            <span className="text-white text-sm font-semibold">바로 촬영</span>
-                          </button>
-                          <button onClick={() => galleryRef.current?.click()} disabled={!name.trim()}
-                            className="flex-1 flex flex-col items-center gap-1.5 py-4 rounded-xl bg-zinc-800 border border-zinc-700 hover:bg-zinc-700 disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.98] transition-all">
-                            <ImageIcon className="w-6 h-6 text-zinc-300" />
-                            <span className="text-zinc-300 text-sm font-semibold">앨범 선택</span>
-                          </button>
+                      {/* 촬영 또는 API 키 안내 */}
+                      {apiKey ? (
+                        <div className="flex flex-col gap-2">
+                          <p className="text-zinc-400 text-sm font-medium">사진으로 재료 인식하기</p>
+                          <div className="flex gap-2">
+                            <button onClick={() => cameraRef.current?.click()} disabled={!name.trim()}
+                              className="flex-1 flex flex-col items-center gap-1.5 py-4 rounded-xl bg-green-600 hover:bg-green-500 disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.98] transition-all">
+                              <Camera className="w-6 h-6 text-white" />
+                              <span className="text-white text-sm font-semibold">바로 촬영</span>
+                            </button>
+                            <button onClick={() => galleryRef.current?.click()} disabled={!name.trim()}
+                              className="flex-1 flex flex-col items-center gap-1.5 py-4 rounded-xl bg-zinc-800 border border-zinc-700 hover:bg-zinc-700 disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.98] transition-all">
+                              <ImageIcon className="w-6 h-6 text-zinc-300" />
+                              <span className="text-zinc-300 text-sm font-semibold">앨범 선택</span>
+                            </button>
+                          </div>
                         </div>
-                        {!name.trim() && (
-                          <p className="text-zinc-600 text-xs text-center">장소 이름을 먼저 입력하세요</p>
-                        )}
-                      </div>
+                      ) : (
+                        <div className="flex flex-col gap-2 p-3.5 bg-zinc-800/60 border border-zinc-700 rounded-xl">
+                          <p className="text-zinc-400 text-xs font-medium">API 키 없이는 재료 인식이 불가해요</p>
+                          {onOpenSettings && (
+                            <button onClick={() => { reset(); onClose(); onOpenSettings() }}
+                              className="flex items-center justify-center gap-2 py-2 rounded-lg bg-green-600/20 border border-green-600/40 text-green-400 text-xs font-semibold">
+                              <Settings className="w-3.5 h-3.5" />설정에서 API 키 등록
+                            </button>
+                          )}
+                        </div>
+                      )}
+
+                      {/* 사진 없이 장소만 추가 */}
+                      <button onClick={handleAddWithoutPhoto} disabled={!name.trim()}
+                        className="text-zinc-500 text-xs hover:text-zinc-400 transition-colors text-center disabled:opacity-40">
+                        사진 없이 장소만 추가하기
+                      </button>
                     </>
                   )}
                 </div>

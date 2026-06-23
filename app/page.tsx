@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useCallback } from 'react'
-import { RefrigeratorIcon, ChefHat, Package, Camera, Settings } from 'lucide-react'
+import { useState } from 'react'
+import { RefrigeratorIcon, ChefHat, Package, Settings } from 'lucide-react'
 import { Ingredient, FridgeSection, CustomLocation } from '@/lib/types'
-import { useApiKey } from '@/hooks/useApiKey'
+import { useApiKeys } from '@/hooks/useApiKeys'
 import { useIngredients } from '@/hooks/useIngredients'
 import { useCustomLocations } from '@/hooks/useCustomLocations'
 import { PhotoUpload } from '@/components/upload/PhotoUpload'
@@ -20,37 +20,36 @@ type Tab = 'fridge' | 'recipes' | 'holding'
 let nextId = 1000
 
 export default function Home() {
-  const { apiKey, saveApiKey, clearApiKey } = useApiKey()
-  const { ingredients, setAll, update, clearSection, clearAll, initialized } = useIngredients()
+  const { keys, activeKey, activeId, loaded: keysLoaded, addKey, removeKey, activateKey, clearAll: clearKeys } = useApiKeys()
+  const { ingredients, setAll, update, clearSection, clearAll: clearIngredients, initialized } = useIngredients()
   const { locations, addLocation, removeLocation } = useCustomLocations()
 
-  const [tab, setTab] = useState<Tab>('fridge')
-  const [addModalSection, setAddModalSection] = useState<FridgeSection | null>(null)
-  const [uncertainPopup, setUncertainPopup] = useState<Ingredient | null>(null)
+  const [tab,              setTab]              = useState<Tab>('fridge')
+  const [addModalSection,  setAddModalSection]  = useState<FridgeSection | null>(null)
+  const [uncertainPopup,   setUncertainPopup]   = useState<Ingredient | null>(null)
   const [detailIngredient, setDetailIngredient] = useState<Ingredient | null>(null)
-  const [settingsOpen, setSettingsOpen] = useState(false)
-  const [addLocationOpen, setAddLocationOpen] = useState(false)
-  const [recipeFilter, setRecipeFilter] = useState<string | null>(null)
+  const [settingsOpen,     setSettingsOpen]     = useState(false)
+  const [addLocationOpen,  setAddLocationOpen]  = useState(false)
+  const [recipeFilter,     setRecipeFilter]     = useState<string | null>(null)
 
+  if (!initialized || !keysLoaded) return <div className="phone-shell bg-[#09090b]" />
+
+  const showUpload          = ingredients.length === 0
   const confirmedIngredients = ingredients.filter(i => i.status === 'confirmed')
-  const heldIngredients = ingredients.filter(i => i.status === 'held')
+  const heldIngredients      = ingredients.filter(i => i.status === 'held')
 
-  if (!initialized) return <div className="phone-shell bg-[#09090b]" />
-
-  const showUpload = ingredients.length === 0
-
-  // 전체 초기화
+  // 전체 초기화: 재료 + 장소 + 모든 API 키
   const handleReset = () => {
-    clearAll()
-    clearApiKey()
-    try {
-      localStorage.removeItem('custom_locations_v1')
-    } catch {}
+    clearIngredients()
+    clearKeys()
+    try { localStorage.removeItem('custom_locations_v1') } catch {}
     locations.forEach(l => removeLocation(l.id))
   }
 
+  // 사진 분석 완료 → 레시피 탭으로
   const handleAnalyzeComplete = (newIngredients: Ingredient[]) => {
-    setAll(newIngredients); setTab('fridge')
+    setAll(newIngredients)
+    setTab('recipes')
   }
 
   const handleAddConfirm = (data: Omit<Ingredient, 'id'>) => {
@@ -59,10 +58,7 @@ export default function Home() {
   }
 
   const handleAddSectionIngredients = (section: FridgeSection, items: Ingredient[]) => {
-    update(prev => [
-      ...prev.filter(i => i.section !== section),
-      ...items,
-    ])
+    update(prev => [...prev.filter(i => i.section !== section), ...items])
   }
 
   const handleAddLocation = (loc: CustomLocation, items: Ingredient[]) => {
@@ -70,70 +66,57 @@ export default function Home() {
     update(prev => [...prev, ...items])
   }
 
-  const handleUncertainConfirm = (id: string, name: string) => {
-    update(prev => prev.map(i => i.id === id ? { ...i, name, status: 'confirmed' as const } : i))
-    setUncertainPopup(null)
-  }
-  const handleUncertainHold = (id: string) => {
-    update(prev => prev.map(i => i.id === id ? { ...i, status: 'held' as const } : i))
-    setUncertainPopup(null)
-  }
-
   const handleFindRecipes = (ingredientName: string) => {
     setRecipeFilter(ingredientName); setTab('recipes')
   }
 
+  const getCustomName = (section: string) =>
+    locations.find(l => l.id === section)?.name
+
   const tabs: { id: Tab; label: string; icon: React.ReactNode; badge?: number }[] = [
-    { id: 'fridge', label: '냉장고', icon: <RefrigeratorIcon className="w-6 h-6" /> },
+    { id: 'fridge',  label: '냉장고', icon: <RefrigeratorIcon className="w-6 h-6" /> },
     { id: 'recipes', label: '레시피', icon: <ChefHat className="w-6 h-6" /> },
     { id: 'holding', label: '보류함', icon: <Package className="w-6 h-6" />, badge: heldIngredients.length || undefined },
   ]
 
-  // 커스텀 장소 이름 찾기
-  const getCustomName = (section: string) =>
-    locations.find(l => l.id === section)?.name
-
   return (
     <div className="phone-shell">
-      {/* Header */}
+      {/* 헤더 */}
       <header className="flex items-center justify-between px-5 pt-5 pb-3.5 border-b border-zinc-800 shrink-0">
         <div className="flex items-center gap-2.5">
           <span className="text-2xl">🧊</span>
           <span className="text-white font-extrabold text-lg tracking-tight">Zero Chef</span>
-          <div className={`w-2 h-2 rounded-full ${apiKey ? 'bg-green-400' : 'bg-zinc-600'}`} />
+          <div className={`w-2 h-2 rounded-full ${activeKey ? 'bg-green-400' : 'bg-zinc-600'}`} />
         </div>
-        <div className="flex items-center gap-2">
-          {!showUpload && (
-            <button onClick={() => { clearAll(); setTab('fridge') }}
-              className="flex items-center gap-1.5 px-3 py-2 bg-zinc-800 hover:bg-zinc-700 rounded-xl text-zinc-400 text-sm font-medium transition-colors">
-              <Camera className="w-4 h-4" />재촬영
-            </button>
-          )}
-          <button onClick={() => setSettingsOpen(true)}
-            className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${
-              apiKey ? 'bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white'
-                     : 'bg-amber-500/20 border border-amber-500/40 text-amber-400'
-            }`}>
-            <Settings className="w-5 h-5" />
-          </button>
-        </div>
+        <button onClick={() => setSettingsOpen(true)}
+          className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${
+            activeKey
+              ? 'bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white'
+              : 'bg-amber-500/20 border border-amber-500/40 text-amber-400'
+          }`}>
+          <Settings className="w-5 h-5" />
+        </button>
       </header>
 
-      {/* Content */}
+      {/* 본문 */}
       <main className="flex-1 overflow-y-auto">
         <div className="px-4 py-4">
           {showUpload ? (
-            <PhotoUpload onAnalyzeComplete={handleAnalyzeComplete} apiKey={apiKey} />
+            <PhotoUpload
+              onAnalyzeComplete={handleAnalyzeComplete}
+              onOpenSettings={() => setSettingsOpen(true)}
+              apiKey={activeKey}
+            />
           ) : (
             <>
               {tab === 'fridge' && (
                 <FridgeView
                   ingredients={ingredients.filter(i => i.status !== 'held')}
                   customLocations={locations}
-                  apiKey={apiKey}
+                  apiKey={activeKey}
                   onDeleteIngredient={id => update(prev => prev.filter(i => i.id !== id))}
                   onClearSection={clearSection}
-                  onClearAll={clearAll}
+                  onClearAll={clearIngredients}
                   onAddIngredient={s => setAddModalSection(s)}
                   onUncertainIngredient={ing => setUncertainPopup(ing)}
                   onTapIngredient={ing => setDetailIngredient(ing)}
@@ -151,8 +134,11 @@ export default function Home() {
               {tab === 'holding' && (
                 <HoldingArea
                   ingredients={heldIngredients}
-                  onConfirm={(id, name) => update(prev => prev.map(i => i.id === id ? { ...i, name, status: 'confirmed' as const } : i))}
+                  onConfirm={(id, name) => update(prev =>
+                    prev.map(i => i.id === id ? { ...i, name, status: 'confirmed' as const } : i)
+                  )}
                   onDelete={id => update(prev => prev.filter(i => i.id !== id))}
+                  onClearAll={() => update(prev => prev.filter(i => i.status !== 'held'))}
                 />
               )}
             </>
@@ -160,7 +146,7 @@ export default function Home() {
         </div>
       </main>
 
-      {/* Bottom nav */}
+      {/* 하단 탭 바 */}
       {!showUpload && (
         <nav className="shrink-0 border-t border-zinc-800 bg-zinc-950 safe-bottom">
           <div className="flex items-center">
@@ -185,19 +171,26 @@ export default function Home() {
         </nav>
       )}
 
-      {/* Modals */}
+      {/* 모달 */}
       <AddIngredientModal
         open={!!addModalSection} section={addModalSection}
         onClose={() => setAddModalSection(null)} onAdd={handleAddConfirm} />
 
       <AddLocationModal
-        open={addLocationOpen} apiKey={apiKey}
-        onAdd={handleAddLocation} onClose={() => setAddLocationOpen(false)} />
+        open={addLocationOpen} apiKey={activeKey}
+        onAdd={handleAddLocation} onClose={() => setAddLocationOpen(false)}
+        onOpenSettings={() => { setAddLocationOpen(false); setSettingsOpen(true) }} />
 
       <UncertainItemPopup
         ingredient={uncertainPopup}
-        onConfirm={handleUncertainConfirm}
-        onHold={handleUncertainHold}
+        onConfirm={(id, name) => {
+          update(prev => prev.map(i => i.id === id ? { ...i, name, status: 'confirmed' as const } : i))
+          setUncertainPopup(null)
+        }}
+        onHold={id => {
+          update(prev => prev.map(i => i.id === id ? { ...i, status: 'held' as const } : i))
+          setUncertainPopup(null)
+        }}
         onClose={() => setUncertainPopup(null)} />
 
       <IngredientDetailSheet
@@ -208,8 +201,9 @@ export default function Home() {
         onFindRecipes={handleFindRecipes} />
 
       <SettingsSheet
-        open={settingsOpen} apiKey={apiKey}
-        onSave={saveApiKey} onClear={clearApiKey}
+        open={settingsOpen}
+        keys={keys} activeId={activeId}
+        onAddKey={addKey} onRemoveKey={removeKey} onActivateKey={activateKey}
         onReset={handleReset} onClose={() => setSettingsOpen(false)} />
     </div>
   )

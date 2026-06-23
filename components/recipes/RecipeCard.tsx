@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Clock, ChevronDown, ChevronUp, CheckCircle2, XCircle } from 'lucide-react'
+import { Clock, ChevronDown, ChevronUp, CheckCircle2, XCircle, PlayCircle, Globe } from 'lucide-react'
 import { Recipe } from '@/lib/types'
 import { getMatchRateBadgeColor } from '@/lib/utils'
 
@@ -15,6 +15,10 @@ export function RecipeCard({ recipe, index }: RecipeCardProps) {
   const [expanded, setExpanded] = useState(false)
   const badgeColor = getMatchRateBadgeColor(recipe.matchRate)
 
+  const ytUrl    = `https://www.youtube.com/results?search_query=${encodeURIComponent((recipe.youtubeQuery ?? recipe.name) + ' 레시피 만들기')}`
+  const naverUrl = `https://search.naver.com/search.naver?query=${encodeURIComponent((recipe.naverQuery ?? recipe.name) + ' 레시피')}`
+  const recipeUrl = `https://www.10000recipe.com/recipe/list.html?q=${encodeURIComponent(recipe.name)}`
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 16 }}
@@ -22,63 +26,41 @@ export function RecipeCard({ recipe, index }: RecipeCardProps) {
       transition={{ delay: index * 0.06 }}
       className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden"
     >
-      {/* Card header */}
-      <button
-        onClick={() => setExpanded(!expanded)}
-        className="w-full text-left p-4"
-      >
+      {/* 카드 헤더 */}
+      <button onClick={() => setExpanded(!expanded)} className="w-full text-left p-4">
         <div className="flex items-start gap-3">
-          {/* Emoji */}
           <div className="w-12 h-12 bg-zinc-800 rounded-xl flex items-center justify-center text-2xl shrink-0">
             {recipe.emoji}
           </div>
-
-          {/* Info */}
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
               <h3 className="text-white font-semibold text-sm truncate">{recipe.name}</h3>
-              <span
-                className={`shrink-0 text-xs font-bold px-2 py-0.5 rounded-full badge-pop ${badgeColor}`}
-              >
+              <span className={`shrink-0 text-xs font-bold px-2 py-0.5 rounded-full badge-pop ${badgeColor}`}>
                 {recipe.matchRate}%
               </span>
             </div>
-
-            {/* Meta */}
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-1 text-zinc-500 text-xs">
-                <Clock className="w-3 h-3" />
-                <span>{recipe.cookTime}분</span>
+                <Clock className="w-3 h-3" /><span>{recipe.cookTime}분</span>
               </div>
-              <div className="flex items-center gap-1 text-zinc-500 text-xs">
-                <span>
-                  {recipe.difficulty === 'easy' ? '⭐ 쉬움' : '⭐⭐ 보통'}
-                </span>
-              </div>
-              {recipe.calories && (
-                <span className="text-zinc-500 text-xs">{recipe.calories}kcal</span>
-              )}
+              <span className="text-zinc-500 text-xs">
+                {recipe.difficulty === 'easy' ? '⭐ 쉬움' : '⭐⭐ 보통'}
+              </span>
+              {recipe.calories && <span className="text-zinc-500 text-xs">{recipe.calories}kcal</span>}
             </div>
-
-            {/* Tags */}
             <div className="flex gap-1 mt-1.5 flex-wrap">
               {recipe.tags.slice(0, 3).map(tag => (
-                <span key={tag} className="text-[10px] px-1.5 py-0.5 bg-zinc-800 text-zinc-500 rounded-md">
-                  {tag}
-                </span>
+                <span key={tag} className="text-[10px] px-1.5 py-0.5 bg-zinc-800 text-zinc-500 rounded-md">{tag}</span>
               ))}
             </div>
           </div>
-
-          {/* Expand icon */}
           <div className="text-zinc-600 shrink-0 mt-1">
             {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
           </div>
         </div>
 
-        {/* Ingredient bars */}
+        {/* 일치율 바 */}
         <div className="mt-3">
-          {/* Match rate bar */}
           <div className="flex items-center gap-2 mb-1">
             <div className="flex-1 h-1 bg-zinc-800 rounded-full overflow-hidden">
               <motion.div
@@ -93,8 +75,6 @@ export function RecipeCard({ recipe, index }: RecipeCardProps) {
             </div>
             <span className="text-zinc-500 text-[10px]">보유 일치율</span>
           </div>
-
-          {/* Available & missing summary */}
           <div className="flex gap-3">
             <div className="flex items-center gap-1">
               <CheckCircle2 className="w-3 h-3 text-green-500" />
@@ -110,7 +90,7 @@ export function RecipeCard({ recipe, index }: RecipeCardProps) {
         </div>
       </button>
 
-      {/* Expanded content */}
+      {/* 펼쳐진 내용 */}
       <AnimatePresence>
         {expanded && (
           <motion.div
@@ -120,9 +100,9 @@ export function RecipeCard({ recipe, index }: RecipeCardProps) {
             transition={{ duration: 0.25 }}
             className="overflow-hidden"
           >
-            <div className="px-4 pb-4 border-t border-zinc-800 pt-3">
-              {/* Ingredients */}
-              <div className="mb-3">
+            <div className="px-4 pb-4 border-t border-zinc-800 pt-3 flex flex-col gap-4">
+              {/* 재료 */}
+              <div>
                 <p className="text-zinc-400 text-xs font-medium mb-2">재료</p>
                 <div className="flex flex-wrap gap-1.5">
                   {recipe.availableIngredients.map(ing => (
@@ -138,7 +118,7 @@ export function RecipeCard({ recipe, index }: RecipeCardProps) {
                 </div>
               </div>
 
-              {/* Steps */}
+              {/* 조리 방법 */}
               <div>
                 <p className="text-zinc-400 text-xs font-medium mb-2">조리 방법</p>
                 <ol className="flex flex-col gap-2">
@@ -151,6 +131,25 @@ export function RecipeCard({ recipe, index }: RecipeCardProps) {
                     </li>
                   ))}
                 </ol>
+              </div>
+
+              {/* 참고 링크 */}
+              <div>
+                <p className="text-zinc-400 text-xs font-medium mb-2">참고 사이트</p>
+                <div className="flex gap-2">
+                  <a href={ytUrl} target="_blank" rel="noopener noreferrer"
+                    className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-red-950/40 border border-red-800/40 text-red-400 hover:bg-red-950/60 text-xs font-semibold transition-all active:scale-95">
+                    <PlayCircle className="w-4 h-4" />YouTube
+                  </a>
+                  <a href={naverUrl} target="_blank" rel="noopener noreferrer"
+                    className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-green-950/40 border border-green-800/40 text-green-400 hover:bg-green-950/60 text-xs font-semibold transition-all active:scale-95">
+                    <Globe className="w-4 h-4" />네이버
+                  </a>
+                  <a href={recipeUrl} target="_blank" rel="noopener noreferrer"
+                    className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-orange-950/40 border border-orange-800/40 text-orange-400 hover:bg-orange-950/60 text-xs font-semibold transition-all active:scale-95">
+                    <Globe className="w-4 h-4" />만개레시피
+                  </a>
+                </div>
               </div>
             </div>
           </motion.div>
