@@ -5,14 +5,21 @@ import { Ingredient, Recipe } from '@/lib/types'
 
 // 환경변수 우선, 없으면 클라이언트 전달값 사용
 function getClient(apiKey?: string) {
-  const key = process.env.OPENAI_API_KEY || apiKey
+  const key = process.env.OPENROUTER_API_KEY || apiKey
   if (!key) throw new Error('API 키가 설정되지 않았습니다.')
-  return new OpenAI({ apiKey: key })
+  return new OpenAI({
+    apiKey: key,
+    baseURL: 'https://openrouter.ai/api/v1',
+    defaultHeaders: {
+      'HTTP-Referer': 'https://zerochef.local',
+      'X-Title': 'Zero Chef',
+    },
+  })
 }
 
 // 환경변수 설정 여부만 클라이언트에 알려줌 (키값은 노출 안 함)
 export async function getEnvKeyStatus(): Promise<{ configured: boolean }> {
-  return { configured: !!process.env.OPENAI_API_KEY }
+  return { configured: !!process.env.OPENROUTER_API_KEY }
 }
 
 export async function analyzeFridgeImage(
@@ -22,7 +29,7 @@ export async function analyzeFridgeImage(
   try {
     const openai = getClient(apiKey)
     const response = await openai.chat.completions.create({
-      model: 'gpt-4o',
+      model: 'openai/gpt-4o',
       max_tokens: 2048,
       messages: [
         {
@@ -76,7 +83,7 @@ export async function getRecipeRecommendations(
       : ''
 
     const response = await openai.chat.completions.create({
-      model: 'gpt-4o',
+      model: 'openai/gpt-4o',
       max_tokens: 4000,
       messages: [
         {
