@@ -38,6 +38,8 @@ interface FridgeViewProps {
   onOpenAddLocation: () => void
 }
 
+type BuiltinEdit = { scope: 'fridge' | 'freezer'; name: string; emoji: string; temp: string }
+
 export function FridgeView({
   ingredients, customLocations, apiKey,
   onDeleteIngredient, onClearSection, onClearAll,
@@ -45,6 +47,11 @@ export function FridgeView({
   onRetake, onUpdateLocation, onOpenAddLocation,
 }: FridgeViewProps) {
   const [confirmClearAll, setConfirmClearAll] = useState(false)
+  const [editingBuiltin, setEditingBuiltin] = useState<BuiltinEdit | null>(null)
+  const [builtinNames, setBuiltinNames] = useState<Record<string, { name: string; emoji: string; temp: string }>>({
+    fridge:  { name: '냉장실', emoji: '🧊', temp: '2°C' },
+    freezer: { name: '냉동실', emoji: '❄️', temp: '-18°C' },
+  })
 
   const confirmedIngredients = ingredients.filter(i => i.status === 'confirmed')
   const uncertainIngredients = ingredients.filter(i => i.status === 'uncertain')
@@ -88,51 +95,64 @@ export function FridgeView({
 
       {/* 냉장고 본체 */}
       <div className="rounded-2xl border-4 border-zinc-700 bg-gradient-to-b from-zinc-800 to-zinc-900 overflow-hidden">
-        {/* 냉장실 헤더 + 컨트롤 */}
-        <SectionHeader
-          title="냉장실" temp="2°C" emoji="🧊"
-          itemCount={fridgeCount}
-          scope="fridge"
-          apiKey={apiKey}
-          sections={FRIDGE_SHELF_SECTIONS}
-          onRetake={onRetake}
-          onClear={clearFridgeSections}
-        />
+        {/* 냉장실 헤더 */}
+        {editingBuiltin?.scope === 'fridge' ? (
+          <BuiltinEditForm
+            value={editingBuiltin}
+            onChange={v => setEditingBuiltin({ ...editingBuiltin, ...v })}
+            onSave={() => {
+              setBuiltinNames(prev => ({ ...prev, fridge: { name: editingBuiltin.name, emoji: editingBuiltin.emoji, temp: editingBuiltin.temp } }))
+              setEditingBuiltin(null)
+            }}
+            onCancel={() => setEditingBuiltin(null)}
+          />
+        ) : (
+          <SectionHeader
+            title={builtinNames.fridge.name} temp={builtinNames.fridge.temp} emoji={builtinNames.fridge.emoji}
+            itemCount={fridgeCount} scope="fridge" apiKey={apiKey}
+            sections={FRIDGE_SHELF_SECTIONS} onRetake={onRetake} onClear={clearFridgeSections}
+            onEdit={() => setEditingBuiltin({ scope: 'fridge', ...builtinNames.fridge })}
+          />
+        )}
 
-        {/* 냉장실 칸들 (버튼 없음) */}
+        {/* 냉장실 칸들 */}
         <div className="divide-y divide-zinc-700/40">
           {FRIDGE_SHELF_SECTIONS.map(section => (
             <ShelfRow
-              key={section}
-              section={section}
-              icon={SECTION_ICONS[section] ?? '📦'}
-              label={getSectionLabel(section)}
+              key={section} section={section}
+              icon={SECTION_ICONS[section] ?? '📦'} label={getSectionLabel(section)}
               ingredients={getBySection(section)}
               onAdd={() => onAddIngredient(section)}
-              onDelete={onDeleteIngredient}
-              onUncertain={onUncertainIngredient}
-              onTap={onTapIngredient}
+              onDelete={onDeleteIngredient} onUncertain={onUncertainIngredient} onTap={onTapIngredient}
             />
           ))}
         </div>
 
-        {/* 냉동실 헤더 + 컨트롤 */}
-        <SectionHeader
-          title="냉동실" temp="-18°C" emoji="❄️"
-          itemCount={freezerCount}
-          scope="freezer"
-          apiKey={apiKey}
-          sections={['freezer']}
-          onRetake={onRetake}
-          onClear={() => onClearSection('freezer')}
-        />
+        {/* 냉동실 헤더 */}
+        {editingBuiltin?.scope === 'freezer' ? (
+          <BuiltinEditForm
+            value={editingBuiltin}
+            onChange={v => setEditingBuiltin({ ...editingBuiltin, ...v })}
+            onSave={() => {
+              setBuiltinNames(prev => ({ ...prev, freezer: { name: editingBuiltin.name, emoji: editingBuiltin.emoji, temp: editingBuiltin.temp } }))
+              setEditingBuiltin(null)
+            }}
+            onCancel={() => setEditingBuiltin(null)}
+          />
+        ) : (
+          <SectionHeader
+            title={builtinNames.freezer.name} temp={builtinNames.freezer.temp} emoji={builtinNames.freezer.emoji}
+            itemCount={freezerCount} scope="freezer" apiKey={apiKey}
+            sections={['freezer']} onRetake={onRetake} onClear={() => onClearSection('freezer')}
+            onEdit={() => setEditingBuiltin({ scope: 'freezer', ...builtinNames.freezer })}
+          />
+        )}
         <ShelfRow
-          section="freezer" icon="❄️" label="냉동칸"
+          section="freezer" icon={builtinNames.freezer.emoji} label={builtinNames.freezer.name}
           ingredients={getBySection('freezer')}
           onAdd={() => onAddIngredient('freezer')}
-          onDelete={onDeleteIngredient}
-          onUncertain={onUncertainIngredient}
-          onTap={onTapIngredient}
+          onDelete={onDeleteIngredient} onUncertain={onUncertainIngredient} onTap={onTapIngredient}
+          hideLabel
         />
       </div>
 
@@ -181,9 +201,10 @@ interface SectionHeaderProps {
   apiKey: string
   onRetake: (scope: 'fridge' | 'freezer' | string, items: Ingredient[], imageUrl: string) => void
   onClear: () => void
+  onEdit?: () => void
 }
 
-function SectionHeader({ title, emoji, temp, itemCount, scope, sections, apiKey, onRetake, onClear }: SectionHeaderProps) {
+function SectionHeader({ title, emoji, temp, itemCount, scope, sections, apiKey, onRetake, onClear, onEdit }: SectionHeaderProps) {
   const cameraRef  = useRef<HTMLInputElement>(null)
   const galleryRef = useRef<HTMLInputElement>(null)
   const [scanning,      setScanning]      = useState(false)
@@ -235,6 +256,14 @@ function SectionHeader({ title, emoji, temp, itemCount, scope, sections, apiKey,
         {scanning && <Loader2 className="w-3.5 h-3.5 text-green-400 animate-spin" />}
 
         <div className="flex items-center gap-1 ml-1">
+          {onEdit && (
+            <button
+              onClick={onEdit}
+              title="장소 편집"
+              className="w-8 h-8 flex items-center justify-center rounded-lg bg-zinc-600 hover:bg-zinc-500 text-zinc-400 hover:text-white transition-all active:scale-90">
+              <Pencil className="w-4 h-4" />
+            </button>
+          )}
           <button
             onClick={() => cameraRef.current?.click()}
             disabled={!apiKey || scanning}
@@ -310,6 +339,50 @@ function ShelfRow({ section, icon, label, hideLabel, ingredients, onAdd, onDelet
   )
 }
 
+/* ── 냉장실/냉동실 인라인 편집 폼 ── */
+const BUILTIN_EMOJIS = ['🧊','❄️','🥶','🌡️','🏠','📦','🗄️','🍱','🥩','🥬','🥛','🍶']
+
+interface BuiltinEditFormProps {
+  value: { name: string; emoji: string; temp: string }
+  onChange: (v: Partial<{ name: string; emoji: string; temp: string }>) => void
+  onSave: () => void
+  onCancel: () => void
+}
+
+function BuiltinEditForm({ value, onChange, onSave, onCancel }: BuiltinEditFormProps) {
+  return (
+    <div className="px-4 py-3 bg-zinc-700/60 flex flex-col gap-2">
+      <div className="flex gap-2">
+        <span className="w-10 h-10 bg-zinc-800 border border-zinc-600 rounded-xl text-xl flex items-center justify-center shrink-0">
+          {value.emoji}
+        </span>
+        <Input value={value.name} onChange={e => onChange({ name: e.target.value })}
+          className="flex-1 bg-zinc-800 border-zinc-600 text-white h-10 rounded-xl text-sm" />
+        <Input value={value.temp} onChange={e => onChange({ temp: e.target.value })}
+          placeholder="온도" className="w-20 bg-zinc-800 border-zinc-600 text-white h-10 rounded-xl text-sm text-center" />
+        <button onClick={onSave}
+          className="w-10 h-10 bg-green-600 hover:bg-green-500 rounded-xl flex items-center justify-center transition-all active:scale-90">
+          <Check className="w-4 h-4 text-white" />
+        </button>
+        <button onClick={onCancel}
+          className="w-10 h-10 bg-zinc-700 hover:bg-zinc-600 rounded-xl flex items-center justify-center transition-all active:scale-90">
+          <X className="w-4 h-4 text-zinc-400" />
+        </button>
+      </div>
+      <div className="flex flex-wrap gap-1.5">
+        {BUILTIN_EMOJIS.map(e => (
+          <button key={e} onClick={() => onChange({ emoji: e })}
+            className={`w-8 h-8 rounded-lg text-base transition-all active:scale-90 ${
+              value.emoji === e ? 'bg-green-600' : 'bg-zinc-800 hover:bg-zinc-700'
+            }`}>
+            {e}
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 /* ── 커스텀 장소 블록 (이름/이모지 편집 포함) ── */
 interface CustomLocationBlockProps {
   location: CustomLocation
@@ -376,21 +449,13 @@ function CustomLocationBlock({
           </div>
         </div>
       ) : (
-        /* 일반 헤더 */
-        <div className="flex items-center gap-1 pl-1 pr-1">
-          <div className="flex-1">
-            <SectionHeader
-              title={location.name} emoji={location.emoji}
-              itemCount={itemCount} scope={location.id}
-              apiKey={apiKey} sections={[location.id]}
-              onRetake={onRetake} onClear={onClear}
-            />
-          </div>
-          <button onClick={() => { setEditName(location.name); setEditEmoji(location.emoji); setEditing(true) }}
-            className="w-8 h-8 flex items-center justify-center text-zinc-600 hover:text-zinc-400 transition-colors mr-1 shrink-0">
-            <Pencil className="w-3.5 h-3.5" />
-          </button>
-        </div>
+        <SectionHeader
+          title={location.name} emoji={location.emoji}
+          itemCount={itemCount} scope={location.id}
+          apiKey={apiKey} sections={[location.id]}
+          onRetake={onRetake} onClear={onClear}
+          onEdit={() => { setEditName(location.name); setEditEmoji(location.emoji); setEditing(true) }}
+        />
       )}
       <ShelfRow
         section={location.id} icon={location.emoji} label={location.name}

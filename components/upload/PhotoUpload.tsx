@@ -77,10 +77,10 @@ export function PhotoUpload({ onAnalyzeComplete, onOpenSettings, apiKey }: Photo
   }
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[calc(100dvh-120px)] px-4 py-8">
+    <div className="flex flex-col items-center justify-center h-full px-4 py-4">
       {/* 헤더 */}
-      <div className="text-center mb-8">
-        <div className="text-5xl mb-4">🧊</div>
+      <div className="text-center mb-6">
+        <div className="text-5xl mb-3">🧊</div>
         <p className="text-white text-xl font-bold">사진 한 장으로 해결하는 요리</p>
         <p className="text-zinc-500 text-sm mt-1.5">냉장고 또는 재료 사진을 찍어주세요</p>
       </div>
