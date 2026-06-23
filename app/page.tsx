@@ -149,7 +149,7 @@ export default function Home() {
             <>
               {tab === 'fridge' && (
                 <FridgeView
-                  ingredients={ingredients.filter(i => i.status !== 'held')}
+                  ingredients={ingredients}
                   customLocations={locations}
                   apiKey={activeKey}
                   onDeleteIngredient={id => update(prev => prev.filter(i => i.id !== id))}

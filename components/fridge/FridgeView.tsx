@@ -48,7 +48,8 @@ export function FridgeView({
 
   const confirmedIngredients = ingredients.filter(i => i.status === 'confirmed')
   const uncertainIngredients = ingredients.filter(i => i.status === 'uncertain')
-  const getBySection = (s: FridgeSection) => confirmedIngredients.filter(i => i.section === s)
+  // 모든 재료(confirmed + uncertain + held) 포함해서 구역별로 표시
+  const getBySection = (s: FridgeSection) => ingredients.filter(i => i.section === s)
 
   const fridgeCount   = FRIDGE_SHELF_SECTIONS.reduce((n, s) => n + getBySection(s).length, 0)
   const freezerCount  = getBySection('freezer').length
@@ -69,9 +70,9 @@ export function FridgeView({
       <div className="flex items-center gap-3 px-3 py-3 bg-zinc-900 rounded-2xl border border-zinc-800">
         <RefrigeratorIcon className="w-5 h-5 text-green-400 shrink-0" />
         <span className="text-white text-sm font-semibold">{confirmedIngredients.length}가지 재료</span>
-        {uncertainIngredients.length > 0 && (
+        {(uncertainIngredients.length + ingredients.filter(i=>i.status==='held').length) > 0 && (
           <span className="text-xs text-amber-400 bg-amber-400/10 px-2 py-1 rounded-full">
-            ❓ {uncertainIngredients.length}개
+            ❓ {uncertainIngredients.length + ingredients.filter(i=>i.status==='held').length}개
           </span>
         )}
         {confirmedIngredients.length > 0 && (
@@ -160,19 +161,12 @@ export function FridgeView({
         <span className="text-sm font-medium">장소 추가 (김치냉장고, 팬트리...)</span>
       </button>
 
-      {/* 불확실 재료 */}
-      {uncertainIngredients.length > 0 && (
-        <div className="rounded-2xl border border-amber-500/30 bg-amber-950/20 p-4">
-          <p className="text-amber-400 text-sm font-semibold mb-2.5">❓ 확인이 필요한 재료</p>
-          <div className="flex flex-wrap gap-2">
-            {uncertainIngredients.map(ing => (
-              <button key={ing.id} onClick={() => onUncertainIngredient(ing)}
-                className="flex items-center gap-2 px-3 py-2 bg-amber-900/40 border border-amber-500/40 rounded-xl text-amber-200 hover:bg-amber-900/60 active:scale-95 transition-all">
-                <span className="text-base">{ing.emoji}</span>
-                <span className="text-sm">확인하기</span>
-              </button>
-            ))}
-          </div>
+      {/* 보류/미확인 재료 안내 (있을 때만) */}
+      {(uncertainIngredients.length > 0 || ingredients.some(i => i.status === 'held')) && (
+        <div className="px-3 py-2 bg-amber-950/20 border border-amber-500/20 rounded-2xl">
+          <p className="text-amber-400/80 text-xs">
+            ❓ 탭하면 이름을 입력하거나 빠르게 선택할 수 있어요
+          </p>
         </div>
       )}
     </div>

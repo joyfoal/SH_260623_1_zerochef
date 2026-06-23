@@ -10,13 +10,15 @@ export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
+  userScalable: false,
+  viewportFit: 'cover',   // 노치/다이나믹 아일랜드까지 채움
   themeColor: '#09090b',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="ko" className="h-full">
-      <body className="h-full antialiased bg-zinc-950">{children}</body>
+    <html lang="ko">
+      <body className="antialiased bg-zinc-950">{children}</body>
     </html>
   )
 }

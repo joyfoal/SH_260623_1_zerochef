@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, Trash2, Calendar, Package, AlertTriangle, ChefHat, Pencil, Check } from 'lucide-react'
 import { Ingredient } from '@/lib/types'
@@ -8,20 +8,56 @@ import { getDaysUntilExpiry, getExpiryLabel, getSectionLabel } from '@/lib/utils
 import { Input } from '@/components/ui/input'
 
 const MEALDB_MAP: Record<string, string> = {
-  '우유': 'Milk', '요거트': 'Yogurt', '두부': 'Tofu', '치즈': 'Cheddar Cheese',
-  '계란': 'Eggs', '베이컨': 'Bacon', '돼지고기': 'Pork', '쇠고기': 'Beef',
-  '닭고기': 'Chicken', '당근': 'Carrots', '양파': 'Onion', '파': 'Spring Onions',
+  // 유제품·계란
+  '우유': 'Milk', '요거트': 'Yogurt', '치즈': 'Cheddar Cheese', '버터': 'Butter',
+  '계란': 'Eggs', '달걀': 'Eggs',
+  // 두부·콩
+  '두부': 'Tofu', '콩': 'Beans', '콩나물': 'Bean Sprouts', '된장': 'Miso',
+  // 육류
+  '베이컨': 'Bacon', '돼지고기': 'Pork', '쇠고기': 'Beef', '닭고기': 'Chicken',
+  '삼겹살': 'Pork Belly', '닭가슴살': 'Chicken Breast', '닭다리': 'Chicken Thighs',
+  '소고기': 'Beef', '햄': 'Ham', '소시지': 'Sausages',
+  // 해산물
+  '새우': 'Prawns', '연어': 'Salmon', '오징어': 'Squid', '조개': 'Clams',
+  '굴': 'Oysters', '게': 'Crab', '참치': 'Tuna', '멸치': 'Anchovies',
+  '홍합': 'Mussels', '문어': 'Octopus', '고등어': 'Mackerel',
+  // 채소
+  '당근': 'Carrots', '양파': 'Onion', '파': 'Spring Onions', '쪽파': 'Spring Onions',
   '마늘': 'Garlic', '생강': 'Ginger', '감자': 'Potatoes', '고구마': 'Sweet Potatoes',
-  '시금치': 'Spinach', '버섯': 'Mushrooms', '애호박': 'Zucchini', '브로콜리': 'Broccoli',
-  '토마토': 'Tomatoes', '오이': 'Cucumber', '배추': 'Cabbage', '케첩': 'Tomato Ketchup',
-  '마요네즈': 'Mayonnaise', '간장': 'Soy Sauce', '참기름': 'Sesame Oil', '버터': 'Butter',
-  '밀가루': 'Plain Flour', '설탕': 'Sugar', '소금': 'Salt', '새우': 'Prawns',
-  '연어': 'Salmon', '사과': 'Apples', '바나나': 'Banana', '빵': 'Bread',
+  '시금치': 'Spinach', '버섯': 'Mushrooms', '애호박': 'Zucchini', '호박': 'Butternut Squash',
+  '브로콜리': 'Broccoli', '토마토': 'Tomatoes', '오이': 'Cucumber', '배추': 'Cabbage',
+  '양배추': 'Cabbage', '무': 'White Radish', '가지': 'Aubergine', '파프리카': 'Red Pepper',
+  '고추': 'Red Pepper', '피망': 'Green Pepper', '셀러리': 'Celery', '아스파라거스': 'Asparagus',
+  '상추': 'Lettuce', '깻잎': 'Sesame Leaves',
+  // 과일
+  '사과': 'Apples', '바나나': 'Banana', '레몬': 'Lemon', '오렌지': 'Orange',
+  '포도': 'Grapes', '딸기': 'Strawberries', '블루베리': 'Blueberries',
+  '복숭아': 'Peaches', '파인애플': 'Pineapple', '망고': 'Mango', '배': 'Pears',
+  '키위': 'Kiwi Fruit', '수박': 'Watermelon', '체리': 'Cherries',
+  // 조미료·소스
+  '케첩': 'Tomato Ketchup', '마요네즈': 'Mayonnaise', '간장': 'Soy Sauce',
+  '참기름': 'Sesame Oil', '설탕': 'Sugar', '소금': 'Salt', '식초': 'White Wine Vinegar',
+  '올리브오일': 'Olive Oil', '고추장': 'Chilli Sauce', '후추': 'Black Pepper',
+  '참깨': 'Sesame Seeds', '들기름': 'Sesame Oil',
+  // 가공식품·기타
+  '밀가루': 'Plain Flour', '빵': 'Bread', '쌀': 'White Rice', '라면': 'Noodles',
+  '김': 'Seaweed', '떡': 'Rice',
 }
 
 const SECTION_EMOJIS: Record<string, string> = {
   'top-shelf': '🔼', 'middle-shelf': '▪️', 'bottom-shelf': '🔽',
   'crisper': '🥦', 'door-upper': '🚪', 'door-lower': '🚪', 'freezer': '❄️',
+}
+
+// 냉장고 섹션별 줌 기준점 (transformOrigin) — scale(2.5) 시 어느 위치를 중심으로 확대할지
+const SECTION_ORIGIN: Record<string, string> = {
+  'top-shelf':    'center 15%',
+  'middle-shelf': 'center 45%',
+  'bottom-shelf': 'center 70%',
+  'crisper':      'center 88%',
+  'door-upper':   '90% 20%',
+  'door-lower':   '90% 70%',
+  'freezer':      'center 40%',
 }
 
 interface IngredientDetailSheetProps {
@@ -44,6 +80,11 @@ export function IngredientDetailSheet({
   const [editName,    setEditName]    = useState('')
   const [editQty,     setEditQty]     = useState('')
   const [editExpiry,  setEditExpiry]  = useState('')
+
+  // 이름 변경 시 사진 에러 초기화 (수정 후 사진이 업데이트되도록)
+  useEffect(() => {
+    setMealdbError(false)
+  }, [ingredient?.name])
 
   if (!ingredient) return null
 
@@ -121,7 +162,10 @@ export function IngredientDetailSheet({
                     {sectionImageUrl && !fridgeError ? (
                       <img src={sectionImageUrl} alt="냉장고"
                         className="w-full h-full object-cover"
-                        style={{ transform: 'scale(2)', objectPosition: 'center center' }}
+                        style={{
+                          transform: 'scale(2.5)',
+                          transformOrigin: SECTION_ORIGIN[ingredient.section] ?? 'center center',
+                        }}
                         onError={() => setFridgeError(true)} />
                     ) : (
                       <div className="w-full h-full flex flex-col items-center justify-center gap-2">
