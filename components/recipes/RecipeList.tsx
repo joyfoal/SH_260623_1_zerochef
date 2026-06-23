@@ -7,7 +7,6 @@ import { getDaysUntilExpiry } from '@/lib/utils'
 import { ExpiringBanner } from './ExpiringBanner'
 import { FilterBar } from './FilterBar'
 import { RecipeCard } from './RecipeCard'
-import { MOCK_RECIPES } from '@/lib/mock-data'
 import { getRecipeRecommendations } from '@/app/actions/fridge'
 
 interface RecipeListProps {
@@ -59,17 +58,9 @@ export function RecipeList({ ingredients, apiKey, model, hasKey, filterIngredien
     setLoading(false)
   }
 
-  // 표시할 레시피 목록
-  const baseRecipes = aiRecipes ?? MOCK_RECIPES
-
   const filtered = useMemo(() => {
-    let list = [...baseRecipes]
-    if (filterIngredient && !aiRecipes) {
-      list = list.filter(r =>
-        r.availableIngredients.includes(filterIngredient) ||
-        r.missingIngredients.includes(filterIngredient)
-      )
-    }
+    if (!aiRecipes) return []
+    let list = [...aiRecipes]
     switch (filter) {
       case 'high-match': list = list.sort((a, b) => b.matchRate - a.matchRate); break
       case '5min':       list = list.filter(r => r.cookTime <= 5).sort((a, b) => b.matchRate - a.matchRate); break
@@ -80,7 +71,7 @@ export function RecipeList({ ingredients, apiKey, model, hasKey, filterIngredien
       default: list = list.sort((a, b) => b.matchRate - a.matchRate)
     }
     return list
-  }, [filter, filterIngredient, expiringNames, baseRecipes, aiRecipes])
+  }, [filter, expiringNames, aiRecipes])
 
   return (
     <div className="flex flex-col gap-3">
@@ -102,9 +93,7 @@ export function RecipeList({ ingredients, apiKey, model, hasKey, filterIngredien
       {/* 헤더 + AI 버튼 */}
       <div className="flex items-center gap-2">
         <Sparkles className="w-4 h-4 text-green-400" />
-        <h2 className="text-white font-bold text-sm">
-          {aiRecipes ? 'AI 추천 레시피' : '추천 레시피'}
-        </h2>
+        <h2 className="text-white font-bold text-sm">AI 추천 레시피</h2>
         {aiRecipes && (
           <span className="text-xs text-green-400 bg-green-950/40 px-2 py-0.5 rounded-full">AI</span>
         )}
@@ -112,7 +101,7 @@ export function RecipeList({ ingredients, apiKey, model, hasKey, filterIngredien
           {aiRecipes && (
             <button onClick={() => { setAiRecipes(null); lastFilterRef.current = undefined }}
               className="text-zinc-600 hover:text-zinc-400 text-xs flex items-center gap-1">
-              <X className="w-3 h-3" />기본으로
+              <X className="w-3 h-3" />초기화
             </button>
           )}
           <button
@@ -143,18 +132,33 @@ export function RecipeList({ ingredients, apiKey, model, hasKey, filterIngredien
         </div>
       )}
 
-      {!loading && (
+      {!loading && !aiRecipes && (
+        <div className="flex flex-col items-center justify-center py-16 gap-4">
+          <p className="text-5xl">🍳</p>
+          <p className="text-white font-bold text-base">레시피를 추천받아보세요</p>
+          <p className="text-zinc-500 text-sm text-center leading-relaxed">
+            냉장고 재료를 기반으로 AI가<br />맞춤 레시피를 추천해드려요
+          </p>
+          <button
+            onClick={() => fetchAiRecipes(filterIngredient ?? undefined)}
+            disabled={!canUseAi || loading}
+            className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-green-600 hover:bg-green-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-bold transition-all active:scale-95">
+            <Sparkles className="w-4 h-4" />
+            AI 레시피 추천받기
+          </button>
+          {!canUseAi && (
+            <p className="text-zinc-600 text-xs">설정에서 API 키를 등록해주세요</p>
+          )}
+        </div>
+      )}
+
+      {!loading && aiRecipes && (
         <>
           <FilterBar active={filter} onChange={setFilter} expiringCount={expiringIngredients.length} />
           {filtered.length === 0 ? (
             <div className="text-center py-14">
               <p className="text-4xl mb-3">🍽️</p>
               <p className="text-zinc-500 text-sm">해당 조건의 레시피가 없어요</p>
-              {filterIngredient && (
-                <button onClick={onClearIngredientFilter} className="mt-3 text-green-400 text-sm underline">
-                  필터 해제하기
-                </button>
-              )}
             </div>
           ) : (
             <div className="flex flex-col gap-3">
