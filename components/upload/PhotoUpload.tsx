@@ -116,7 +116,7 @@ export function PhotoUpload({ onAnalyzeComplete, onOpenSettings, apiKey, model }
                 <span className="text-3xl">🔑</span>
                 <div>
                   <p className="text-white font-semibold text-sm mb-1">API 키를 먼저 등록해주세요</p>
-                  <p className="text-zinc-500 text-xs">OpenAI API 키가 있어야 냉장고 분석이 가능해요</p>
+                  <p className="text-zinc-500 text-xs">OpenRouter API 키가 있어야 냉장고 분석이 가능해요</p>
                 </div>
                 <button onClick={onOpenSettings}
                   className="flex items-center gap-2 px-4 py-2.5 bg-green-600 hover:bg-green-500 rounded-xl text-white text-sm font-semibold transition-all active:scale-95">
