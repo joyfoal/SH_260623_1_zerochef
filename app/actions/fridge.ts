@@ -1,28 +1,24 @@
 'use server'
 
-import Anthropic from '@anthropic-ai/sdk'
+import OpenAI from 'openai'
 import { Ingredient, Recipe } from '@/lib/types'
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
 })
 
 export async function analyzeFridgeImage(imageBase64: string): Promise<Partial<Ingredient>[]> {
   try {
-    const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-6',
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4o',
       max_tokens: 2048,
       messages: [
         {
           role: 'user',
           content: [
             {
-              type: 'image',
-              source: {
-                type: 'base64',
-                media_type: 'image/jpeg',
-                data: imageBase64,
-              },
+              type: 'image_url',
+              image_url: { url: `data:image/jpeg;base64,${imageBase64}` },
             },
             {
               type: 'text',
@@ -42,11 +38,9 @@ JSON 배열만 반환:`,
       ],
     })
 
-    const text = response.content[0].type === 'text' ? response.content[0].text : ''
+    const text = response.choices[0]?.message?.content ?? ''
     const match = text.match(/\[[\s\S]*\]/)
-    if (match) {
-      return JSON.parse(match[0])
-    }
+    if (match) return JSON.parse(match[0])
   } catch (e) {
     console.error('Vision API error:', e)
   }
@@ -55,8 +49,8 @@ JSON 배열만 반환:`,
 
 export async function getRecipeRecommendations(ingredientNames: string[]): Promise<Partial<Recipe>[]> {
   try {
-    const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-6',
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4o',
       max_tokens: 3000,
       messages: [
         {
@@ -84,11 +78,9 @@ JSON 배열만 반환:`,
       ],
     })
 
-    const text = response.content[0].type === 'text' ? response.content[0].text : ''
+    const text = response.choices[0]?.message?.content ?? ''
     const match = text.match(/\[[\s\S]*\]/)
-    if (match) {
-      return JSON.parse(match[0])
-    }
+    if (match) return JSON.parse(match[0])
   } catch (e) {
     console.error('Recipe API error:', e)
   }
