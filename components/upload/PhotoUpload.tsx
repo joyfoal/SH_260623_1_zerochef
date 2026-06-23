@@ -164,11 +164,37 @@ export function PhotoUpload({ onAnalyzeComplete, onOpenSettings, apiKey }: Photo
   )
 }
 
+// Canvas로 리사이즈 + JPEG 변환 (HEIC 등 모든 포맷 처리, 크기 축소)
 async function fileToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload  = () => resolve((reader.result as string).split(',')[1])
-    reader.onerror = reject
-    reader.readAsDataURL(file)
+    const img = new Image()
+    const objectUrl = URL.createObjectURL(file)
+
+    img.onload = () => {
+      const MAX = 1600
+      let { width, height } = img
+      if (width > MAX || height > MAX) {
+        const ratio = Math.min(MAX / width, MAX / height)
+        width  = Math.round(width  * ratio)
+        height = Math.round(height * ratio)
+      }
+      const canvas = document.createElement('canvas')
+      canvas.width  = width
+      canvas.height = height
+      canvas.getContext('2d')!.drawImage(img, 0, 0, width, height)
+      URL.revokeObjectURL(objectUrl)
+      resolve(canvas.toDataURL('image/jpeg', 0.88).split(',')[1])
+    }
+
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl)
+      // fallback: FileReader
+      const reader = new FileReader()
+      reader.onload  = () => resolve((reader.result as string).split(',')[1])
+      reader.onerror = reject
+      reader.readAsDataURL(file)
+    }
+
+    img.src = objectUrl
   })
 }

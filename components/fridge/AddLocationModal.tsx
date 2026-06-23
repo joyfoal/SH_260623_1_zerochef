@@ -43,11 +43,7 @@ export function AddLocationModal({ open, apiKey, onAdd, onClose, onOpenSettings 
 
     try {
       setProgress(40)
-      const base64 = await new Promise<string>((res, rej) => {
-        const r = new FileReader()
-        r.onload = () => res((r.result as string).split(',')[1])
-        r.onerror = rej; r.readAsDataURL(file)
-      })
+      const base64 = await fileToJpegBase64(file)
       setProgress(70)
       const result = await analyzeFridgeImage(base64, apiKey)
       setProgress(95)
@@ -195,4 +191,31 @@ export function AddLocationModal({ open, apiKey, onAdd, onClose, onOpenSettings 
       </AnimatePresence>
     </>
   )
+}
+
+function fileToJpegBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    const objectUrl = URL.createObjectURL(file)
+    img.onload = () => {
+      const MAX = 1600
+      let { width, height } = img
+      if (width > MAX || height > MAX) {
+        const ratio = Math.min(MAX / width, MAX / height)
+        width = Math.round(width * ratio); height = Math.round(height * ratio)
+      }
+      const canvas = document.createElement('canvas')
+      canvas.width = width; canvas.height = height
+      canvas.getContext('2d')!.drawImage(img, 0, 0, width, height)
+      URL.revokeObjectURL(objectUrl)
+      resolve(canvas.toDataURL('image/jpeg', 0.88).split(',')[1])
+    }
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl)
+      const reader = new FileReader()
+      reader.onload = () => resolve((reader.result as string).split(',')[1])
+      reader.onerror = reject; reader.readAsDataURL(file)
+    }
+    img.src = objectUrl
+  })
 }

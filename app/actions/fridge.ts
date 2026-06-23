@@ -27,11 +27,13 @@ export async function analyzeFridgeImage(
             {
               type: 'text',
               text: `이 사진에서 식재료를 찾아 JSON 배열로 반환해주세요.
-냉장고 내부 사진이면 냉장고 섹션으로, 그 외 장소(선반·식탁·바구니 등)이면 section을 "counter"로 지정하세요.
+
+냉장고 내부 사진이면 냉장고 섹션(top-shelf, middle-shelf 등)으로 지정하세요.
+냉장고가 아닌 사진(선반, 식탁, 바구니, 봉투 등)이면 section을 "middle-shelf"로 지정하세요.
 
 각 재료:
 - name: 한국어 이름
-- section: "top-shelf"|"middle-shelf"|"bottom-shelf"|"crisper"|"door-upper"|"door-lower"|"freezer"|"counter"
+- section: "top-shelf"|"middle-shelf"|"bottom-shelf"|"crisper"|"door-upper"|"door-lower"|"freezer"
 - confidence: 0~1
 - emoji: 적절한 이모지
 - quantity: 대략적인 양 (선택)
