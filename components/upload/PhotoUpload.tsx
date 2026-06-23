@@ -1,41 +1,75 @@
 'use client'
 
 import { useRef, useState } from 'react'
-import { Camera, Upload, Sparkles, Loader2 } from 'lucide-react'
+import { Camera, Upload, Sparkles, Loader2, KeyRound } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { analyzeFridgeImage } from '@/app/actions/fridge'
 
 interface PhotoUploadProps {
   onAnalyzeComplete: () => void
+  apiKey: string
 }
 
-export function PhotoUpload({ onAnalyzeComplete }: PhotoUploadProps) {
+const PROGRESS_STEPS = [
+  { pct: 20, label: '이미지 분석 중...' },
+  { pct: 45, label: '식재료 인식 중...' },
+  { pct: 70, label: '위치 매핑 중...' },
+  { pct: 90, label: '레시피 준비 중...' },
+  { pct: 100, label: '완료!' },
+]
+
+export function PhotoUpload({ onAnalyzeComplete, apiKey }: PhotoUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [preview, setPreview] = useState<string | null>(null)
   const [analyzing, setAnalyzing] = useState(false)
   const [progress, setProgress] = useState(0)
+  const [statusLabel, setStatusLabel] = useState('')
+  const [error, setError] = useState<string | null>(null)
 
   const handleFile = async (file: File) => {
+    setError(null)
     const url = URL.createObjectURL(file)
     setPreview(url)
     setAnalyzing(true)
     setProgress(0)
 
-    // Simulate progressive analysis steps
-    const steps = [
-      { pct: 20, msg: '이미지 분석 중...' },
-      { pct: 45, msg: '식재료 인식 중...' },
-      { pct: 70, msg: '위치 매핑 중...' },
-      { pct: 90, msg: '레시피 준비 중...' },
-      { pct: 100, msg: '완료!' },
-    ]
+    if (apiKey) {
+      // Real API call
+      try {
+        setStatusLabel('이미지 변환 중...')
+        setProgress(10)
 
-    for (const step of steps) {
-      await new Promise(r => setTimeout(r, 600))
-      setProgress(step.pct)
+        const base64 = await fileToBase64(file)
+        setStatusLabel('AI가 식재료를 인식하고 있어요...')
+        setProgress(30)
+
+        await analyzeFridgeImage(base64, apiKey)
+
+        setProgress(90)
+        setStatusLabel('완료!')
+        await new Promise(r => setTimeout(r, 500))
+        setProgress(100)
+        await new Promise(r => setTimeout(r, 300))
+        onAnalyzeComplete()
+      } catch (e: any) {
+        setAnalyzing(false)
+        setPreview(null)
+        setError(
+          e?.message?.includes('401') ? 'API 키가 유효하지 않아요. 설정에서 확인해주세요.' :
+          e?.message?.includes('429') ? '요청 한도를 초과했어요. 잠시 후 다시 시도해주세요.' :
+          'AI 분석 중 오류가 발생했어요. 다시 시도해주세요.'
+        )
+      }
+    } else {
+      // Demo mode — simulate progress
+      for (const step of PROGRESS_STEPS) {
+        setStatusLabel(step.label)
+        setProgress(step.pct)
+        await new Promise(r => setTimeout(r, 600))
+      }
+      await new Promise(r => setTimeout(r, 300))
+      onAnalyzeComplete()
     }
-
-    await new Promise(r => setTimeout(r, 400))
-    onAnalyzeComplete()
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -63,17 +97,13 @@ export function PhotoUpload({ onAnalyzeComplete }: PhotoUploadProps) {
           {preview && (
             <div className="relative w-full aspect-[3/4] mb-6 rounded-2xl overflow-hidden">
               <img src={preview} alt="냉장고" className="w-full h-full object-cover opacity-60" />
-              {/* Scanning line animation */}
               <div
                 className="absolute left-0 right-0 h-0.5 bg-green-400 shadow-[0_0_12px_4px_rgba(74,222,128,0.6)]"
-                style={{
-                  top: `${progress}%`,
-                  transition: 'top 0.6s ease',
-                }}
+                style={{ top: `${progress}%`, transition: 'top 0.6s ease' }}
               />
               <div className="absolute inset-0 flex flex-col items-center justify-end pb-6 bg-gradient-to-t from-black/80 via-transparent">
                 <Loader2 className="w-6 h-6 text-green-400 animate-spin mb-2" />
-                <p className="text-white font-medium text-sm">AI가 재료를 인식하고 있어요</p>
+                <p className="text-white font-medium text-sm">{statusLabel || 'AI가 재료를 인식하고 있어요'}</p>
                 <p className="text-green-400 font-bold text-lg mt-1">{progress}%</p>
               </div>
             </div>
@@ -87,9 +117,26 @@ export function PhotoUpload({ onAnalyzeComplete }: PhotoUploadProps) {
         </div>
       ) : (
         <>
+          {/* API key notice */}
+          {!apiKey && (
+            <div className="w-full max-w-sm mb-4 flex items-center gap-2.5 px-3 py-2.5 bg-amber-950/40 border border-amber-500/30 rounded-xl fade-in-up">
+              <KeyRound className="w-4 h-4 text-amber-400 shrink-0" />
+              <p className="text-amber-300 text-xs">
+                API 키 미등록 — 사진 업로드 시 데모 모드로 동작해요
+              </p>
+            </div>
+          )}
+
+          {/* Error */}
+          {error && (
+            <div className="w-full max-w-sm mb-4 px-3 py-2.5 bg-red-950/40 border border-red-500/30 rounded-xl fade-in-up">
+              <p className="text-red-300 text-xs">{error}</p>
+            </div>
+          )}
+
           {/* Upload zone */}
           <div
-            className="w-full max-w-sm border-2 border-dashed border-zinc-700 rounded-2xl p-8 flex flex-col items-center gap-4 cursor-pointer hover:border-green-500/50 hover:bg-green-500/5 transition-all active:scale-98 fade-in-up"
+            className="w-full max-w-sm border-2 border-dashed border-zinc-700 rounded-2xl p-8 flex flex-col items-center gap-4 cursor-pointer hover:border-green-500/50 hover:bg-green-500/5 transition-all active:scale-[0.99] fade-in-up"
             onClick={() => inputRef.current?.click()}
             onDrop={handleDrop}
             onDragOver={e => e.preventDefault()}
@@ -139,4 +186,16 @@ export function PhotoUpload({ onAnalyzeComplete }: PhotoUploadProps) {
       />
     </div>
   )
+}
+
+async function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => {
+      const result = reader.result as string
+      resolve(result.split(',')[1])
+    }
+    reader.onerror = reject
+    reader.readAsDataURL(file)
+  })
 }

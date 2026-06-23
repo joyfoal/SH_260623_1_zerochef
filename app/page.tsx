@@ -1,9 +1,10 @@
 'use client'
 
 import { useState, useCallback } from 'react'
-import { RefrigeratorIcon, ChefHat, Package, Camera } from 'lucide-react'
+import { RefrigeratorIcon, ChefHat, Package, Camera, Settings } from 'lucide-react'
 import { Ingredient, FridgeSection } from '@/lib/types'
 import { MOCK_INGREDIENTS } from '@/lib/mock-data'
+import { useApiKey } from '@/hooks/useApiKey'
 import { PhotoUpload } from '@/components/upload/PhotoUpload'
 import { FridgeView } from '@/components/fridge/FridgeView'
 import { AddIngredientModal } from '@/components/ingredients/AddIngredientModal'
@@ -11,12 +12,14 @@ import { UncertainItemPopup } from '@/components/ingredients/UncertainItemPopup'
 import { IngredientDetailSheet } from '@/components/ingredients/IngredientDetailSheet'
 import { HoldingArea } from '@/components/ingredients/HoldingArea'
 import { RecipeList } from '@/components/recipes/RecipeList'
+import { SettingsSheet } from '@/components/settings/SettingsSheet'
 
 type Tab = 'fridge' | 'recipes' | 'holding'
 
 let nextId = 100
 
 export default function Home() {
+  const { apiKey, saveApiKey, clearApiKey } = useApiKey()
   const [phase, setPhase] = useState<'upload' | 'app'>('upload')
   const [tab, setTab] = useState<Tab>('fridge')
   const [ingredients, setIngredients] = useState<Ingredient[]>(MOCK_INGREDIENTS)
@@ -24,6 +27,7 @@ export default function Home() {
   const [addModalSection, setAddModalSection] = useState<FridgeSection | null>(null)
   const [uncertainPopup, setUncertainPopup] = useState<Ingredient | null>(null)
   const [detailIngredient, setDetailIngredient] = useState<Ingredient | null>(null)
+  const [settingsOpen, setSettingsOpen] = useState(false)
 
   const confirmedIngredients = ingredients.filter(i => i.status === 'confirmed')
   const heldIngredients = ingredients.filter(i => i.status === 'held')
@@ -88,7 +92,21 @@ export default function Home() {
   if (phase === 'upload') {
     return (
       <div className="h-full overflow-y-auto">
-        <PhotoUpload onAnalyzeComplete={handleAnalyzeComplete} />
+        <PhotoUpload onAnalyzeComplete={handleAnalyzeComplete} apiKey={apiKey} />
+        <SettingsSheet
+          open={settingsOpen}
+          apiKey={apiKey}
+          onSave={saveApiKey}
+          onClear={clearApiKey}
+          onClose={() => setSettingsOpen(false)}
+        />
+        {/* Settings button on upload screen */}
+        <button
+          onClick={() => setSettingsOpen(true)}
+          className="fixed top-4 right-4 w-9 h-9 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-xl flex items-center justify-center text-zinc-400 hover:text-white transition-colors"
+        >
+          <Settings className="w-4 h-4" />
+        </button>
       </div>
     )
   }
@@ -111,6 +129,10 @@ export default function Home() {
         <div className="flex items-center gap-2">
           <span className="text-xl">🧊</span>
           <span className="text-white font-bold text-sm">냉장고 셰프</span>
+          {/* API key indicator */}
+          <div className={`w-1.5 h-1.5 rounded-full ${apiKey ? 'bg-green-400' : 'bg-zinc-600'}`}
+            title={apiKey ? 'API 키 등록됨' : 'API 키 없음 (데모 모드)'}
+          />
         </div>
         <div className="flex items-center gap-2">
           <span className="text-zinc-500 text-xs">{confirmedIngredients.length}가지 재료</span>
@@ -120,6 +142,17 @@ export default function Home() {
           >
             <Camera className="w-3 h-3" />
             재촬영
+          </button>
+          <button
+            onClick={() => setSettingsOpen(true)}
+            className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${
+              apiKey
+                ? 'bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white'
+                : 'bg-amber-500/20 border border-amber-500/40 text-amber-400 hover:bg-amber-500/30'
+            }`}
+            title="API 키 설정"
+          >
+            <Settings className="w-3.5 h-3.5" />
           </button>
         </div>
       </header>
@@ -194,6 +227,14 @@ export default function Home() {
         ingredient={detailIngredient}
         onClose={() => setDetailIngredient(null)}
         onDelete={handleDetailDelete}
+      />
+
+      <SettingsSheet
+        open={settingsOpen}
+        apiKey={apiKey}
+        onSave={saveApiKey}
+        onClear={clearApiKey}
+        onClose={() => setSettingsOpen(false)}
       />
     </div>
   )

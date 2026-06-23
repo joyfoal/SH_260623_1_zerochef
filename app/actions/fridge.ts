@@ -3,12 +3,16 @@
 import OpenAI from 'openai'
 import { Ingredient, Recipe } from '@/lib/types'
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-})
+function getClient(apiKey: string) {
+  return new OpenAI({ apiKey })
+}
 
-export async function analyzeFridgeImage(imageBase64: string): Promise<Partial<Ingredient>[]> {
+export async function analyzeFridgeImage(
+  imageBase64: string,
+  apiKey: string
+): Promise<Partial<Ingredient>[]> {
   try {
+    const openai = getClient(apiKey)
     const response = await openai.chat.completions.create({
       model: 'gpt-4o',
       max_tokens: 2048,
@@ -43,12 +47,17 @@ JSON 배열만 반환:`,
     if (match) return JSON.parse(match[0])
   } catch (e) {
     console.error('Vision API error:', e)
+    throw e
   }
   return []
 }
 
-export async function getRecipeRecommendations(ingredientNames: string[]): Promise<Partial<Recipe>[]> {
+export async function getRecipeRecommendations(
+  ingredientNames: string[],
+  apiKey: string
+): Promise<Partial<Recipe>[]> {
   try {
+    const openai = getClient(apiKey)
     const response = await openai.chat.completions.create({
       model: 'gpt-4o',
       max_tokens: 3000,
@@ -83,6 +92,7 @@ JSON 배열만 반환:`,
     if (match) return JSON.parse(match[0])
   } catch (e) {
     console.error('Recipe API error:', e)
+    throw e
   }
   return []
 }
