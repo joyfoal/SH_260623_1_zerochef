@@ -6,6 +6,7 @@ export type BuiltinSection =
   | 'door-upper'
   | 'door-lower'
   | 'freezer'
+  | 'pantry'
 
 // custom-{id} 형태로 커스텀 장소 지원
 export type FridgeSection = BuiltinSection | string
@@ -22,6 +23,7 @@ export interface Ingredient {
   quantity?: string
   status: IngredientStatus
   isBasicSeasoning?: boolean
+  bbox?: [number, number, number, number]  // [left%, top%, width%, height%] 0~100
 }
 
 export interface CustomLocation {

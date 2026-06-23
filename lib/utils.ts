@@ -36,6 +36,7 @@ const BUILTIN_LABELS: Record<string, string> = {
   'door-upper': '도어 상단',
   'door-lower': '도어 하단',
   'freezer': '냉동칸',
+  'pantry': '상온 보관',
 }
 
 export function getSectionLabel(section: string, customName?: string): string {

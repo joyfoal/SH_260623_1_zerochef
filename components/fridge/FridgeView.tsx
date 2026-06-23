@@ -15,6 +15,7 @@ const FRIDGE_SHELF_SECTIONS: FridgeSection[] = [
 const SECTION_ICONS: Record<string, string> = {
   'top-shelf': '🔼', 'middle-shelf': '▪️', 'bottom-shelf': '🔽',
   'crisper': '🥦', 'door-upper': '🚪', 'door-lower': '🚪', 'freezer': '❄️',
+  'pantry': '🗄️',
 }
 
 // display:none이면 iOS에서 카메라가 열리지 않아 position:absolute로 숨김
@@ -156,6 +157,28 @@ export function FridgeView({
           hideLabel
         />
       </div>
+
+      {/* 상온 보관 (pantry) */}
+      {getBySection('pantry').length > 0 && (
+        <div className="bg-zinc-900 rounded-2xl border border-zinc-700/60 overflow-hidden">
+          <div className="flex items-center gap-2 px-4 py-3 border-b border-zinc-700/40">
+            <span className="text-lg">🗄️</span>
+            <span className="text-white font-bold text-sm">상온 보관</span>
+            <span className="text-zinc-500 text-xs ml-1">({getBySection('pantry').length})</span>
+            <button onClick={() => onClearSection('pantry')}
+              className="ml-auto w-8 h-8 flex items-center justify-center rounded-xl bg-zinc-800 text-zinc-500 hover:text-red-400">
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          </div>
+          <ShelfRow
+            section="pantry" icon="🗄️" label="상온 보관"
+            ingredients={getBySection('pantry')}
+            onAdd={() => onAddIngredient('pantry')}
+            onDelete={onDeleteIngredient} onUncertain={onUncertainIngredient} onTap={onTapIngredient}
+            hideLabel
+          />
+        </div>
+      )}
 
       {/* 커스텀 장소들 */}
       {customLocations.map(loc => (

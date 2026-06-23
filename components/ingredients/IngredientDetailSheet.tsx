@@ -136,9 +136,9 @@ export function IngredientDetailSheet({
             <div className="flex-1 overflow-y-auto">
               {/* 이미지 2단 */}
               <div className="grid grid-cols-2 gap-2 px-4 pb-2">
-                {/* 재료 사진 */}
+                {/* 식품 사진 */}
                 <div className="flex flex-col gap-1">
-                  <p className="text-zinc-500 text-[10px] font-semibold uppercase tracking-wide pl-1">재료 사진</p>
+                  <p className="text-zinc-500 text-[10px] font-semibold uppercase tracking-wide pl-1">식품</p>
                   <div className="relative h-36 bg-zinc-800 rounded-2xl overflow-hidden flex items-center justify-center">
                     {mealdbUrl && !mealdbError ? (
                       <img src={mealdbUrl} alt={ingredient.name}
@@ -155,19 +155,30 @@ export function IngredientDetailSheet({
                   </div>
                 </div>
 
-                {/* 냉장고 실제 사진 (확대 크롭) */}
+                {/* 재료 사진 (확대 크롭) */}
                 <div className="flex flex-col gap-1">
-                  <p className="text-zinc-500 text-[10px] font-semibold uppercase tracking-wide pl-1">냉장고 사진</p>
+                  <p className="text-zinc-500 text-[10px] font-semibold uppercase tracking-wide pl-1">재료 사진</p>
                   <div className="relative h-36 bg-zinc-800 rounded-2xl overflow-hidden">
-                    {sectionImageUrl && !fridgeError ? (
-                      <img src={sectionImageUrl} alt="냉장고"
-                        className="w-full h-full object-cover"
-                        style={{
-                          transform: 'scale(2.5)',
-                          transformOrigin: SECTION_ORIGIN[ingredient.section] ?? 'center center',
-                        }}
-                        onError={() => setFridgeError(true)} />
-                    ) : (
+                    {sectionImageUrl && !fridgeError ? (() => {
+                      // bbox 있으면 개별 크롭, 없으면 섹션 기반 크롭
+                      const bbox = ingredient.bbox
+                      let transform = 'scale(2.5)'
+                      let origin = SECTION_ORIGIN[ingredient.section] ?? 'center center'
+                      if (bbox) {
+                        const [bx, by, bw, bh] = bbox
+                        const cx = bx + bw / 2
+                        const cy = by + bh / 2
+                        const scale = Math.min(100 / (bw * 1.4), 100 / (bh * 1.4), 4)
+                        transform = `scale(${scale.toFixed(2)})`
+                        origin = `${cx.toFixed(1)}% ${cy.toFixed(1)}%`
+                      }
+                      return (
+                        <img src={sectionImageUrl} alt="재료"
+                          className="w-full h-full object-cover"
+                          style={{ transform, transformOrigin: origin }}
+                          onError={() => setFridgeError(true)} />
+                      )
+                    })() : (
                       <div className="w-full h-full flex flex-col items-center justify-center gap-2">
                         <span className="text-4xl">{sectionIcon}</span>
                         <span className="text-zinc-600 text-xs text-center px-2">{sectionName}</span>
