@@ -29,7 +29,7 @@ let nextId = 1000
 export default function Home() {
   const { keys, activeKey, activeId, loaded: keysLoaded, addKey, removeKey, activateKey, clearAll: clearKeys } = useApiKeys()
   const { ingredients, setAll, update, clearSection, clearAll: clearIngredients, initialized } = useIngredients()
-  const { locations, addLocation, updateLocation, removeLocation } = useCustomLocations()
+  const { locations, addLocation, updateLocation, removeLocation, clearAll: clearLocations } = useCustomLocations()
   const { modelId, setModelId } = useModel()
 
   // 비전 미지원 모델이면 이미지 분석엔 GPT-4o fallback
@@ -69,10 +69,11 @@ export default function Home() {
 
   // 전체 초기화
   const handleReset = () => {
-    clearIngredients(); clearKeys()
+    clearIngredients()
+    clearKeys()
+    clearLocations()
     setSectionImages({})
-    try { localStorage.removeItem('custom_locations_v1') } catch {}
-    locations.forEach(l => removeLocation(l.id))
+    setTab('fridge')
   }
 
   // 최초 사진 분석 완료 → 레시피 탭으로

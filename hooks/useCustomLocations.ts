@@ -43,5 +43,10 @@ export function useCustomLocations() {
     })
   }, [])
 
-  return { locations, addLocation, updateLocation, removeLocation }
+  const clearAll = useCallback(() => {
+    setLocations([])
+    try { localStorage.removeItem(STORAGE_KEY) } catch {}
+  }, [])
+
+  return { locations, addLocation, updateLocation, removeLocation, clearAll }
 }
