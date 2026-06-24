@@ -39,6 +39,14 @@ export function RecipeList({ ingredients, apiKey, model, hasKey, filterIngredien
     }
   }, [filterIngredient])
 
+  // 마운트 시 재료가 있으면 자동으로 AI 레시피 로드
+  useEffect(() => {
+    if (canUseAi && ingredients.length > 0) {
+      fetchAiRecipes()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   const canUseAi = hasKey ?? !!apiKey
 
   const fetchAiRecipes = async (target?: string) => {
@@ -132,23 +140,12 @@ export function RecipeList({ ingredients, apiKey, model, hasKey, filterIngredien
         </div>
       )}
 
-      {!loading && !aiRecipes && (
-        <div className="flex flex-col items-center justify-center py-16 gap-4">
+      {!loading && !aiRecipes && !canUseAi && (
+        <div className="flex flex-col items-center justify-center py-16 gap-3">
           <p className="text-5xl">🍳</p>
-          <p className="text-white font-bold text-base">레시피를 추천받아보세요</p>
           <p className="text-zinc-500 text-sm text-center leading-relaxed">
-            냉장고 재료를 기반으로 AI가<br />맞춤 레시피를 추천해드려요
+            설정에서 API 키를 등록하면<br />AI 레시피를 추천받을 수 있어요
           </p>
-          <button
-            onClick={() => fetchAiRecipes(filterIngredient ?? undefined)}
-            disabled={!canUseAi || loading}
-            className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-green-600 hover:bg-green-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-bold transition-all active:scale-95">
-            <Sparkles className="w-4 h-4" />
-            AI 레시피 추천받기
-          </button>
-          {!canUseAi && (
-            <p className="text-zinc-600 text-xs">설정에서 API 키를 등록해주세요</p>
-          )}
         </div>
       )}
 
