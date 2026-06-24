@@ -37,6 +37,7 @@ interface FridgeViewProps {
   onTapIngredient: (ingredient: Ingredient) => void
   onRetake: (scope: 'fridge' | 'freezer' | string, items: Ingredient[], imageUrl: string) => void
   onUpdateLocation: (id: string, patch: { name?: string; emoji?: string }) => void
+  onDeleteLocation: (id: string) => void
   onOpenAddLocation: () => void
 }
 
@@ -46,7 +47,7 @@ export function FridgeView({
   ingredients, customLocations, apiKey, model,
   onDeleteIngredient, onClearSection, onClearAll,
   onAddIngredient, onUncertainIngredient, onTapIngredient,
-  onRetake, onUpdateLocation, onOpenAddLocation,
+  onRetake, onUpdateLocation, onDeleteLocation, onOpenAddLocation,
 }: FridgeViewProps) {
   const [confirmClearAll, setConfirmClearAll] = useState(false)
   const [editingBuiltin, setEditingBuiltin] = useState<BuiltinEdit | null>(null)
@@ -95,8 +96,8 @@ export function FridgeView({
         )}
       </div>
 
-      {/* 냉장고 본체 */}
-      <div className="rounded-2xl border-4 border-zinc-700 bg-gradient-to-b from-zinc-800 to-zinc-900 overflow-hidden">
+      {/* 냉장고 본체 — 재료가 하나라도 있을 때만 표시 */}
+      {(fridgeCount > 0 || freezerCount > 0) && <div className="rounded-2xl border-4 border-zinc-700 bg-gradient-to-b from-zinc-800 to-zinc-900 overflow-hidden">
         {/* 냉장실 헤더 */}
         {editingBuiltin?.scope === 'fridge' ? (
           <BuiltinEditForm
@@ -156,7 +157,7 @@ export function FridgeView({
           onDelete={onDeleteIngredient} onUncertain={onUncertainIngredient} onTap={onTapIngredient}
           hideLabel
         />
-      </div>
+      </div>}
 
       {/* 상온 보관 (pantry) */}
       {getBySection('pantry').length > 0 && (
@@ -189,7 +190,7 @@ export function FridgeView({
           ingredients={getBySection(loc.id)}
           apiKey={apiKey} model={model}
           onRetake={onRetake}
-          onClear={() => onClearSection(loc.id)}
+          onDeleteLocation={() => onDeleteLocation(loc.id)}
           onAdd={() => onAddIngredient(loc.id)}
           onDelete={onDeleteIngredient}
           onUncertain={onUncertainIngredient}
@@ -416,7 +417,7 @@ interface CustomLocationBlockProps {
   apiKey: string
   model?: string
   onRetake: (scope: string, items: Ingredient[], imageUrl: string) => void
-  onClear: () => void
+  onDeleteLocation: () => void
   onAdd: () => void
   onDelete: (id: string) => void
   onUncertain: (i: Ingredient) => void
@@ -428,7 +429,7 @@ const EMOJI_OPTIONS = ['🌶️','🏠','❄️','🗄️','📦','🍷','🧊',
 
 function CustomLocationBlock({
   location, itemCount, ingredients, apiKey, model,
-  onRetake, onClear, onAdd, onDelete, onUncertain, onTap, onUpdateLocation,
+  onRetake, onDeleteLocation, onAdd, onDelete, onUncertain, onTap, onUpdateLocation,
 }: CustomLocationBlockProps) {
   const [editing,   setEditing]   = useState(false)
   const [editName,  setEditName]  = useState(location.name)
@@ -479,7 +480,7 @@ function CustomLocationBlock({
           title={location.name} emoji={location.emoji}
           itemCount={itemCount} scope={location.id}
           apiKey={apiKey} model={model} sections={[location.id]}
-          onRetake={onRetake} onClear={onClear}
+          onRetake={onRetake} onClear={onDeleteLocation}
           onEdit={() => { setEditName(location.name); setEditEmoji(location.emoji); setEditing(true) }}
         />
       )}

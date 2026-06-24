@@ -51,7 +51,8 @@ export async function analyzeFridgeImage(
 - 냉장이 필요 없는 가공식품(라면류, 스낵류, 건면, 소스 등) → "pantry"
 
 각 재료:
-- name: 한국어 이름 (브랜드명 포함, 예: "신라면", "진라면", "참치캔")
+- name: 한국어 제품명 (포장에 보이는 브랜드명+제품명 그대로, 예: "신라면", "진라면", "너구리", "오뚜기 진라면 순한맛", "참치캔", "백설탕")
+  여러 개가 한 사진에 있으면 각각 별도 항목으로 반환하세요.
 - section: "top-shelf"|"middle-shelf"|"bottom-shelf"|"crisper"|"door-upper"|"door-lower"|"freezer"|"pantry"
 - confidence: 0~1
 - emoji: 적절한 이모지

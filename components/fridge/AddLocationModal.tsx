@@ -8,12 +8,15 @@ import { CustomLocation, Ingredient } from '@/lib/types'
 import { analyzeFridgeImage } from '@/app/actions/fridge'
 
 const LOCATION_PRESETS = [
+  { name: '냉장고', emoji: '🧊' },
   { name: '김치냉장고', emoji: '🌶️' },
   { name: '베란다 냉장고', emoji: '🏠' },
   { name: '냉동고', emoji: '❄️' },
   { name: '팬트리', emoji: '🗄️' },
   { name: '식료품 창고', emoji: '📦' },
   { name: '와인셀러', emoji: '🍷' },
+  { name: '상온보관', emoji: '🌡️' },
+  { name: '기타', emoji: '📌' },
 ]
 
 interface AddLocationModalProps {

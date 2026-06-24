@@ -111,6 +111,12 @@ export default function Home() {
     if (imageUrl) setSectionImages(prev => ({ ...prev, [loc.id]: imageUrl }))
   }
 
+  const handleDeleteLocation = (id: string) => {
+    clearSection(id)
+    removeLocation(id)
+    setSectionImages(prev => { const next = { ...prev }; delete next[id]; return next })
+  }
+
   const handleFindRecipes = (ingredientName: string) => {
     setRecipeFilter(ingredientName); setTab('recipes')
   }
@@ -169,6 +175,7 @@ export default function Home() {
                   model={visionModelId}
                   onRetake={handleRetake}
                   onUpdateLocation={updateLocation}
+                  onDeleteLocation={handleDeleteLocation}
                   onOpenAddLocation={() => setAddLocationOpen(true)}
                 />
               )}
@@ -245,6 +252,7 @@ export default function Home() {
         onClose={() => setUncertainPopup(null)} />
 
       <IngredientDetailSheet
+        key={detailIngredient?.id ?? 'none'}
         ingredient={detailIngredient}
         customLocationName={detailIngredient ? getCustomName(detailIngredient.section) : undefined}
         sectionImageUrl={detailIngredient ? getSectionImageUrl(detailIngredient) : undefined}
