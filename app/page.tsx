@@ -33,7 +33,7 @@ export default function Home() {
   const { modelId, setModelId } = useModel()
 
   // 비전 미지원 모델이면 이미지 분석엔 GPT-4o fallback
-  const visionModelId = getModelById(modelId).hasVision ? modelId : 'openai/gpt-4o'
+  const visionModelId = getModelById(modelId).hasVision ? modelId : 'openai/gpt-4o-mini'
 
   const [tab,              setTab]              = useState<Tab>('fridge')
   const [addModalSection,  setAddModalSection]  = useState<FridgeSection | null>(null)

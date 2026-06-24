@@ -10,8 +10,8 @@ export interface ModelInfo {
 
 export const OPENROUTER_MODELS: ModelInfo[] = [
   {
-    id: 'openai/gpt-4o',
-    name: 'GPT-4o',
+    id: 'openai/gpt-4o-mini',
+    name: 'GPT-4o mini',
     provider: 'OpenAI',
     providerEmoji: '🤖',
     hasVision: true,
@@ -64,7 +64,7 @@ export const OPENROUTER_MODELS: ModelInfo[] = [
   },
 ]
 
-export const DEFAULT_MODEL_ID = 'openai/gpt-4o'
+export const DEFAULT_MODEL_ID = 'openai/gpt-4o-mini'
 export const MODEL_STORAGE_KEY = 'selected_model'
 
 export function getModelById(id: string): ModelInfo {
